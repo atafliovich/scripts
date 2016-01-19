@@ -1,5 +1,8 @@
 '''Get the final grades from the CDF grades file (with no header or
-comments) and fill in the Blackboard [curse] file.'''
+comments) and fill in the Blackboard [curse] file.
+
+WARNING: has not been tested in a long while.
+'''
 
 from xlrd import open_workbook,XL_CELL_TEXT
 from xlwt import Workbook

@@ -1,18 +1,31 @@
 """Email marks, rubrics, autotester results, etc. to
-students. Basically, email text files to students."""
+students. Basically, email text files to students.
+"""
 
+import argparse
 import os
 import sys
 import time
-from loadclasslist import load_by_utsc_id
+from util import Student
+from util import load_bb
+
+course = "CSC C24"
+asst = "Lab 1"
+bbfile = "/cmshome/tafliovi/send/jan7.csv"
+path_prefix = "/cmshome/tafliovi/send/lab01"
+path_suffix = ""
 
 sender = "atafliovich@utsc.toronto.edu"
 sendmail_loc = "/usr/sbin/sendmail"
-path_prefix = "/users/h02/atafliovich/120/assts/a"
+subject = "%s: grading results for %s" % (course, asst)
+
 
 def send_mail(recipient, subject, message_body):
-    """Send an email to 'recepient' (str) with subject 'subject' (str)
-    and message body 'message_body' (str)."""
+    """(str, str, str) -> NoneType
+    
+    Send an email to recepien with subject line subject
+    and message body message_body.
+    """
     
     # Build the message header
     header = ("From: %s\nTo: %s\nSubject: %s\r\n\r\n" %
@@ -23,32 +36,37 @@ def send_mail(recipient, subject, message_body):
     email.write(header + message_body)
     email_status = email.close()
 
+
 def send_mails(students, subject, path_pref, path_suff):
-    """Send an email to each student in the dictionary of Students
-    'students', with subject 'subject' and the message body from a
-    file path_pref/login/path_suff."""
+    """({str: Student}, str, str, str) -> NoneType
+    
+    Send an email to each student in the dictionary of Students (by student_id),
+    with subject subject and the message body being the contents of a file
+    path_pref/Student.utorid/path_suff.
+    """
 
     for student in students.values():
         try:
             markfile = open(os.path.join(path_pref,
-                                         student.utsc_id,
+                                         student.student_id,
                                          path_suff))
             body = markfile.read()
             markfile.close()
 
             send_mail(student.email, subject, body)
-        except:
-            print "No result for %s." % student.utsc_id
+        except IOError as error:
+            print("No result for %s: %s" % student.student_id, error)
+
 
 if __name__ == "__main__":
 
-    if len(sys.argv) != 3:
-        print "python emailmarks.py <classlist> <assignment #>"
-        sys.exit(0)
+    # get args
+    parser = argparse.ArgumentParser(
+        description=('Email contents of result files to students.'))
+    parser.add_argument('classlist',
+                        help='Path to the classlist file in BB format.')
+    args = parser.parse_args()
 
-    students = load_by_utsc_id(sys.argv[1])
-    asst_no = sys.argv[2]
-    subject = "A20: Marked assignment %s" % asst_no
-    path = os.path.join(path_prefix + asst_no, "marking", "marked")
-    send_mails(students, subject, path, 
-               os.path.join("a" + asst_no, "cover.txt"))
+    # email
+    students = load_bb(args.classlist)
+    send_mails(students, subject, path_prefix, path_suffix)
