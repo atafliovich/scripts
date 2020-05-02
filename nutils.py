@@ -4,6 +4,7 @@ grades files, CATME files, and what not.
 """
 
 import csv
+import re
 from email_validator import validate_email, EmailNotValidError
 
 
@@ -37,11 +38,32 @@ def make_classlist(students, outfile, attrs=DEFAULT_STUDENT_STR,
 
 def load_quercus_grades_file(infile, dict_key='student_number'):
     '''Read Quercus CSV Gradebook.
-    Return Dict[dict_key, Tuple(Student, Grades)].
+    Return (Dict[dict_key, Tuple(Student, Grades)], outofs).
     The default dictionary key is student_number. Another common use case would be 'utorid'.
     '''
 
-    pass
+    reader = csv.DictReader(infile)
+    dict_key_to_student_grades = {}
+
+    for row in reader:
+        first = row['Student'].strip()
+        if first in ('', 'Student, Test'):
+            continue
+        if first == 'Points Possible':
+            outofs = _make_out_of_from_quercus_row(row)
+            continue
+
+        student = _make_student_from_quercus_row(row)
+        grades = _make_grades_from_quercus_row(row)
+
+        try:
+            key = getattr(student, dict_key)
+            dict_key_to_student_grades[key] = (student, grades)
+        except AttributeError:
+            print('WARNING: This student does not have attribute {}:\n\t{}'.format(
+                dict_key, student))
+
+    return (dict_key_to_student_grades, outofs)
 
 
 class Students:
@@ -80,24 +102,15 @@ class Students:
 
     @staticmethod
     def load_quercus_classlist(infile):
-        '''Return a new Students created from a Quercus possibly empty grades
+        '''Return a new Students created from a Quercus possibly empty gradebook
         csv file.'''
 
         reader = csv.DictReader(infile)
         students = set()
         for row in reader:
-            if not _contains_data_quercus(row):
+            if not _contains_student_data_quercus(row):
                 continue
-            names = row['Student'].split(',')
-            sections = row['Section'].split(' and ')
-            student = Student(student_number=row['Integration ID'],
-                              utorid=row['SIS User ID'],
-                              first=names[1],
-                              last=names[0],
-                              lecture=sections[0],
-                              tutorial=sections[1],
-                              id1=row['ID']
-                              )
+            student = _make_student_from_quercus_row(row)
             students.add(student)
 
         return Students(students)
@@ -221,16 +234,9 @@ class Grades:
 
         '''
 
-        try:
-            grade = float(grade)
-        except TypeError:
-            raise TypeError('Invalid type for grade: {} of type {}.'.format(
-                grade, type(grade)))
-        if isinstance(assignment, str):
-            self.grades[assignment.strip()] = grade
-        else:
-            raise TypeError('Invalid type for assignment: {} of type {}.'.format(
-                assignment, type(assignment)))
+        grade = _clean_grade(grade)
+        assignment = _clean_asst(assignment)
+        self.grades[assignment] = grade
 
     def add_grades(self, grades):
         '''Add/update grades from dictionary grades.
@@ -251,13 +257,79 @@ class Grades:
         except KeyError:
             raise KeyError('No such assignment: {}'.format(assignment))
 
+    def __str__(self):
+        return str(self.grades)
+
+
+def _clean_grade(grade):
+    try:
+        return float(grade)
+    except ValueError:
+        raise TypeError('Invalid type for grade: {} of type {}.'.format(
+            grade, type(grade)))
+
+
+def _clean_asst(assignment):
+    if isinstance(assignment, str):
+        return assignment.strip()
+    raise TypeError('Invalid type for assignment: {} of type {}.'.format(
+        assignment, type(assignment)))
+
+
+def _make_student_from_quercus_row(row):
+    '''Create and return a Student from a row of Quercus file.'''
+
+    names = row['Student'].split(',')
+    sections = row['Section'].split(' and ')
+    student = Student(student_number=row['Integration ID'],
+                      utorid=row['SIS User ID'],
+                      first=names[1],
+                      last=names[0],
+                      lecture=sections[0],
+                      tutorial=sections[1],
+                      id1=row['ID']
+                      )
+    return student
+
+
+def _make_grades_from_quercus_row(row):
+    '''Create and return a Grades from a row of Quercus file.
+
+    '''
+    grades = Grades()
+    for asst, grade in row.items():
+        asst = _clean_asst(asst)
+        if isinstance(grade, str) and grade.strip() == '':
+            grade = 0
+        if _is_quercus_asst_name(asst):
+            grades.add_grade(asst, _clean_grade(grade))
+    return grades
+
+
+def _make_out_of_from_quercus_row(row):
+    '''Create and return a dict mapping asst name to total points.'''
+
+    outofs = {}
+    for key, value in row.items():
+        key = _clean_asst(key)
+        if _is_quercus_asst_name(key):
+            outofs[key] = _clean_grade(value)
+    return outofs
+
+
+def _is_quercus_asst_name(word):
+    # assignments on Quercus are "AsstName (numericID)"
+
+    match = re.fullmatch(r'\w+\s\(\d+\)', word.strip())
+    return match is not None
+
 
 def _clean(word):
     return word.strip() if word else word
 
 
 def _is_utorid(word):
-        '''Alphanumeric up to MAX_UTORID_LENGTH.'''
+    '''Alphanumeric up to MAX_UTORID_LENGTH.'''
 
     return word.isalnum() and len(word) <= MAX_UTORID_LENGTH
 
@@ -275,7 +347,7 @@ def _is_email(word):
     return True
 
 
-def _contains_data_quercus(row):
+def _contains_student_data_quercus(row):
     '''Does this row contain student info?'''
 
     names = row['Student']

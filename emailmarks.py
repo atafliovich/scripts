@@ -9,10 +9,10 @@ import time
 from utils import Student
 from utils import load_bb
 
-subject = "CSC C24: grading results for Lab01"
-bbfile = "/cmshome/tafliovi/c24/jan7.csv"
-path_prefix = "/cmshome/tafliovi/c24/submissions"
-path_suffix = "lab01/result.txt"
+subject = "CSC C24: grading results for lab09"
+bbfile = "/cmshome/tafliovi/c24/feb24.csv"
+path_prefix = "/cmshome/tafliovi/c24/submissionsLab9"
+path_suffix = "lab09/result.txt"
 
 sender = "atafliovich@utsc.utoronto.ca"
 sendmail_loc = "/usr/sbin/sendmail"
@@ -27,6 +27,7 @@ def send_mail(recipient, subject, message_body):
     # Build the message header
     header = ("From: %s\nTo: %s\nSubject: %s\r\n\r\n" %
               (sender, recipient, subject))
+
 
     # Actually send the message
     email = os.popen("%s -t" % (sendmail_loc), "w")
@@ -77,3 +78,5 @@ if __name__ == "__main__":
                subject, 
                args.path_prefix if args.path_prefix else path_prefix,
                path_suffix if args.path_suffix else path_suffix)
+
+
