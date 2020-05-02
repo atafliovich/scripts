@@ -14,6 +14,9 @@ STUDENT_NUMBER_LENGTH = 10
 DEFAULT_STUDENT_STR = ('last', 'first', 'student_number', 'utorid',
                        'gitid', 'email', 'lecture', 'tutorial', 'id1', 'id2')
 
+# TODO Fix this
+DEFAULT_FORMULA_OUTOF = 100
+
 
 def DEFAULT_STUDENT_SORT(student): return student.last + student.first
 
@@ -37,6 +40,30 @@ def make_classlist(students, outfile, attrs=DEFAULT_STUDENT_STR,
         outfile.write(student.full_str(attrs) + '\n')
 # TODO
 # def make_grades_file
+
+
+def make_csv_submit_file(outfile, dict_key_to_student_grades, asst, exam_no_shows):
+    '''Write a CSV submit file for eMarks to outfile.
+
+    dict_key_to_student_grades maps some key (normally student_number
+    or utorid) to Tuple(Student, Grades).
+    asst is the name of the "final mark" assignment
+    exam_no_shows is a list of keys into the dict of exam no shows.
+
+    '''
+
+    for key, (student, grades) in dict_key_to_student_grades.items():
+        print(key, key in exam_no_shows)
+        try:
+            grade = grades.get_grade(asst)
+        except KeyError:
+            print('WARNING: No grade for assignment {} for this student:\n\t{}'.format(
+                asst, student))
+            continue
+
+        outfile.write('{},{}{}\n'.format(student.student_number,
+                                         grade,
+                                         ',x' if key in exam_no_shows else ''))
 
 
 def load_quercus_grades_file(infile, dict_key='student_number'):
@@ -127,6 +154,7 @@ def _make_grades_from_gf_line(line, assts):
 
 
 def _make_out_of_from_gf_header(header):
+    # TODO FIX collecting calculated grades
     outofs = {}
     assts = []
     for line in header:
@@ -136,6 +164,14 @@ def _make_out_of_from_gf_header(header):
             outof = _clean_grade(match.group(2))
             outofs[asst] = outof
             assts.append(asst)
+            continue
+        match = re.match(r'(\w+)\s*=', line)  # calculated grade
+        if match:
+            asst = _clean_asst(match.group(1))
+            outof = DEFAULT_FORMULA_OUTOF
+            outofs[asst] = outof
+            assts.append(asst)
+            continue
     return (assts, outofs)
 
 
