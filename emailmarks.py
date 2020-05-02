@@ -4,43 +4,38 @@ students. Basically, email text files to students.
 
 import argparse
 import os
-import sys
-import time
-from utils import Student
 from utils import load_bb
 
-subject = "CSC C24: grading results for lab09"
-bbfile = "/cmshome/tafliovi/c24/feb24.csv"
-path_prefix = "/cmshome/tafliovi/c24/submissionsLab9"
-path_suffix = "lab09/result.txt"
+SUBJECT = "CSC C24: grading results for lab09"
+CLASSLIST = "/cmshome/tafliovi/c24/feb24.csv"
+PATH_PREFIX = "/cmshome/tafliovi/c24/submissionsLab9"
+PATH_SUFFIX = "lab09/result.txt"
 
-sender = "atafliovich@utsc.utoronto.ca"
-sendmail_loc = "/usr/sbin/sendmail"
+SENDER = "atafliovich@utsc.utoronto.ca"
+SENDMAIL_LOC = "/usr/sbin/sendmail"
+
 
 def send_mail(recipient, subject, message_body):
-    """(str, str, str) -> NoneType
-    
-    Send an email to recepient with subject line subject
-    and message body message_body.
+    """Send an email to recepient with subject line subject and message
+    body message_body.
+
     """
-    
+
     # Build the message header
     header = ("From: %s\nTo: %s\nSubject: %s\r\n\r\n" %
-              (sender, recipient, subject))
-
+              (SENDER, recipient, subject))
 
     # Actually send the message
-    email = os.popen("%s -t" % (sendmail_loc), "w")
+    email = os.popen("%s -t" % (SENDMAIL_LOC), "w")
     email.write(header + message_body)
-    email_status = email.close()
+    email.close()
 
 
 def send_mails(students, subject, path_pref, path_suff):
-    """({str: Student}, str, str, str) -> NoneType
-    
-    Send an email to each student in the dictionary of Students (by
+    """Send an email to each student in the dictionary of Students (by
     student_id), with subject subject and the message body being the
     contents of a file path_pref/Student.utorid/path_suff.
+
     """
 
     for student in students.values():
@@ -72,11 +67,10 @@ if __name__ == "__main__":
                         help='Sufffix of the path to the file to email: from the student submission directory.')
     args = parser.parse_args()
 
-    # email        
-    students = load_bb(open(args.classlist), False) if args.classlist else load_bb(open(bbfile), False)
-    send_mails(students, 
-               subject, 
-               args.path_prefix if args.path_prefix else path_prefix,
-               path_suffix if args.path_suffix else path_suffix)
-
-
+    # email
+    STUDENTS = load_bb(open(args.classlist), False) if args.classlist else load_bb(
+        open(CLASSLIST), False)
+    send_mails(STUDENTS,
+               SUBJECT,
+               args.path_prefix if args.path_prefix else PATH_PREFIX,
+               PATH_SUFFIX if args.path_suffix else PATH_SUFFIX)
