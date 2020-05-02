@@ -53,7 +53,6 @@ def make_csv_submit_file(outfile, dict_key_to_student_grades, asst, exam_no_show
     '''
 
     for key, (student, grades) in dict_key_to_student_grades.items():
-        print(key, key in exam_no_shows)
         try:
             grade = grades.get_grade(asst)
         except KeyError:
@@ -62,8 +61,8 @@ def make_csv_submit_file(outfile, dict_key_to_student_grades, asst, exam_no_show
             continue
 
         outfile.write('{},{}{}\n'.format(student.student_number,
-                                         grade,
-                                         ',x' if key in exam_no_shows else ''))
+                                         int(grade),
+                                         ',y' if key in exam_no_shows else ''))
 
 
 def load_quercus_grades_file(infile, dict_key='student_number'):
