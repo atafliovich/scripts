@@ -69,6 +69,76 @@ def load_quercus_grades_file(infile, dict_key='student_number'):
     return (dict_key_to_student_grades, outofs)
 
 
+def load_gf_file(infile, dict_key='student_number'):
+    '''Read gf grades file.
+    Return (Dict[dict_key, Tuple(Student, Grades)], outofs).
+    The default dictionary key is student_number. Another common use case would be 'utorid'.
+    '''
+
+    dict_key_to_student_grades = {}
+
+    lines = infile.readlines()
+    sep = lines.index('\n')
+
+    header = lines[:sep + 1]
+    assts, outofs = _make_out_of_from_gf_header(header)
+
+    for line in lines[sep + 1:]:
+        student = _make_student_from_gf_line(line)
+        grades = _make_grades_from_gf_line(line, assts)
+
+        try:
+            key = getattr(student, dict_key)
+            dict_key_to_student_grades[key] = (student, grades)
+        except AttributeError:
+            print('WARNING: This student does not have attribute {}:\n\t{}'.format(
+                dict_key, student))
+
+    return (dict_key_to_student_grades, outofs)
+
+
+def _make_student_from_gf_line(line):
+
+    fields = line.strip().split(',')
+    match = re.fullmatch(
+        r'(\d+) [ dx][ dx] ([\w-]+)((\s+([\w-]+))+)', fields[0])
+
+    stunum = match.group(1)
+    last = match.group(2)
+    first = match.group(3).strip()
+    utorid = fields[1] if len(fields) > 1 and not fields[1].isdigit() else None
+
+    return Student(student_number=stunum, first=first, last=last, utorid=utorid)
+
+
+def _make_grades_from_gf_line(line, assts):
+    grades = Grades()
+    fields = line.strip().split(',')
+    if len(fields) == 1:
+        return grades
+
+    if not fields[1].isdigit():
+        fields = fields[2:]
+    else:
+        fields = fields[1:]
+
+    grades.add_grades(zip(assts, fields))
+    return grades
+
+
+def _make_out_of_from_gf_header(header):
+    outofs = {}
+    assts = []
+    for line in header:
+        match = re.fullmatch(r'(\w+)\s*/\s*(\d+)\n', line)
+        if match:
+            asst = _clean_asst(match.group(1))
+            outof = _clean_grade(match.group(2))
+            outofs[asst] = outof
+            assts.append(asst)
+    return (assts, outofs)
+
+
 class Students:
     '''A collection of Students.'''
 
