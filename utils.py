@@ -5,12 +5,15 @@ Work in progress.
 """
 
 import csv
+import math
 import re
 from email_validator import validate_email, EmailNotValidError
 
 
 MAX_UTORID_LENGTH = 8
 STUDENT_NUMBER_LENGTH = 10
+# str methods of Student and Students will use this as default format/ordering
+# if any of these are not present, they are omitted from the str
 DEFAULT_STUDENT_STR = ('last', 'first', 'student_number', 'utorid',
                        'gitid', 'email', 'lecture', 'tutorial', 'id1', 'id2')
 
@@ -38,8 +41,49 @@ def make_classlist(students, outfile, attrs=DEFAULT_STUDENT_STR,
         outfile.write(','.join(list(attrs)) + '\n')
     for student in student_list:
         outfile.write(student.full_str(attrs) + '\n')
-# TODO
-# def make_grades_file
+
+
+def make_empty_gf(students, outfile, outofs=None,
+                  utorid=True, key=DEFAULT_STUDENT_SORT):
+    '''Write out an empty gf file.
+
+    students is the Students object to write.
+    outfile is the file to write to, open for writing.
+    outofs is a Dict[asst:str, outof:int] for the header.
+    key is the key for sorting Students.
+    utorid is True/False: whether to include utorids.
+    '''
+
+    if outofs is None:
+        outofs = {}
+
+    student_list = list(students)
+    student_list.sort(key=key)
+
+    header = _make_gf_header(outofs, utorid)
+    outfile.write(header + '\n')
+
+    for student in student_list:
+        line = _make_gf_student_line(student, utorid)
+        outfile.write(line)
+
+
+def make_gf_file(outfile, stnum_to_student_grades, outofs,
+                 utorid=True, key=DEFAULT_STUDENT_SORT):
+    '''Write a gf file to outfile.
+
+    stnum_to_student_grades is Dict[stnum, Tuple(Student, Grades)]
+    outofs is a List[(asst, grade)] since it must be ordered for gf.
+
+    '''
+
+    header = _make_gf_header(outofs, utorid)
+    outfile.write(header + '\n')
+
+    student_grades_list = _sorted_student_grades(stnum_to_student_grades, key)
+    for student, grades in student_grades_list:
+        line = _make_gf_student_line(student, utorid, grades, outofs)
+        outfile.write(line)
 
 
 def make_csv_submit_file(outfile, dict_key_to_student_grades, asst, exam_no_shows):
@@ -61,7 +105,8 @@ def make_csv_submit_file(outfile, dict_key_to_student_grades, asst, exam_no_show
             continue
 
         outfile.write('{},{}{}\n'.format(student.student_number,
-                                         int(grade),
+                                         # submit file needs integers
+                                         math.ceil(grade),
                                          ',y' if key in exam_no_shows else ''))
 
 
@@ -69,109 +114,24 @@ def load_quercus_grades_file(infile, dict_key='student_number'):
     '''Read Quercus CSV Gradebook.
     Return (Dict[dict_key, Tuple(Student, Grades)], outofs).
     The default dictionary key is student_number. Another common use case would be 'utorid'.
+    See also StudentGrades' staticmethod.
     '''
 
-    reader = csv.DictReader(infile)
-    dict_key_to_student_grades = {}
+    student_grades = StudentGrades.load_quercus_grades_file(infile, dict_key)
 
-    for row in reader:
-        first = row['Student'].strip()
-        if first in ('', 'Student, Test'):
-            continue
-        if first == 'Points Possible':
-            outofs = _make_out_of_from_quercus_row(row)
-            continue
-
-        student = _make_student_from_quercus_row(row)
-        grades = _make_grades_from_quercus_row(row)
-
-        try:
-            key = getattr(student, dict_key)
-            dict_key_to_student_grades[key] = (student, grades)
-        except AttributeError:
-            print('WARNING: This student does not have attribute {}:\n\t{}'.format(
-                dict_key, student))
-
-    return (dict_key_to_student_grades, outofs)
+    return (student_grades.studentgrades, student_grades.outofs)
 
 
 def load_gf_file(infile, dict_key='student_number'):
     '''Read gf grades file.
     Return (Dict[dict_key, Tuple(Student, Grades)], outofs).
     The default dictionary key is student_number. Another common use case would be 'utorid'.
+    See also StudentGrades' staticmethod.
     '''
 
-    dict_key_to_student_grades = {}
+    student_grades = StudentGrades.load_gf_file(infile, dict_key)
 
-    lines = infile.readlines()
-    sep = lines.index('\n')
-
-    header = lines[:sep + 1]
-    assts, outofs = _make_out_of_from_gf_header(header)
-
-    for line in lines[sep + 1:]:
-        student = _make_student_from_gf_line(line)
-        grades = _make_grades_from_gf_line(line, assts)
-
-        try:
-            key = getattr(student, dict_key)
-            dict_key_to_student_grades[key] = (student, grades)
-        except AttributeError:
-            print('WARNING: This student does not have attribute {}:\n\t{}'.format(
-                dict_key, student))
-
-    return (dict_key_to_student_grades, outofs)
-
-
-def _make_student_from_gf_line(line):
-
-    fields = line.strip().split(',')
-    match = re.fullmatch(
-        r'(\d+) [ dx][ dx] ([\w-]+)((\s+([\w-]+))+)', fields[0])
-
-    stunum = match.group(1)
-    last = match.group(2)
-    first = match.group(3).strip()
-    utorid = fields[1] if len(fields) > 1 and not fields[1].isdigit() else None
-
-    return Student(student_number=stunum, first=first, last=last, utorid=utorid)
-
-
-def _make_grades_from_gf_line(line, assts):
-    grades = Grades()
-    fields = line.strip().split(',')
-    if len(fields) == 1:
-        return grades
-
-    if not fields[1].isdigit():
-        fields = fields[2:]
-    else:
-        fields = fields[1:]
-
-    grades.add_grades(zip(assts, fields))
-    return grades
-
-
-def _make_out_of_from_gf_header(header):
-    # TODO FIX collecting calculated grades
-    outofs = {}
-    assts = []
-    for line in header:
-        match = re.fullmatch(r'(\w+)\s*/\s*(\d+)\n', line)
-        if match:
-            asst = _clean_asst(match.group(1))
-            outof = _clean_grade(match.group(2))
-            outofs[asst] = outof
-            assts.append(asst)
-            continue
-        match = re.match(r'(\w+)\s*=', line)  # calculated grade
-        if match:
-            asst = _clean_asst(match.group(1))
-            outof = DEFAULT_FORMULA_OUTOF
-            outofs[asst] = outof
-            assts.append(asst)
-            continue
-    return (assts, outofs)
+    return (student_grades.studentgrades, student_grades.outofs)
 
 
 class Students:
@@ -336,6 +296,9 @@ class Grades:
     def __init__(self):
         self.grades = {}
 
+    def __iter__(self):
+        return iter(self.grades)
+
     def add_grade(self, assignment, grade=0):
         '''Add/update grade for assignment. Raise TypeError if assignment is
         not a str or if grade cannot be converted to float.
@@ -367,6 +330,173 @@ class Grades:
 
     def __str__(self):
         return str(self.grades)
+
+
+class StudentGrades:
+    '''My own gradebook.'''
+
+    def __init__(self, outofs=None, studentgrades=None, dict_key='student_number'):
+        '''Init an empty Gradesfile.'''
+
+        if outofs:
+            self.outofs = dict(outofs)
+        else:
+            self.outofs = {}
+
+        if studentgrades:
+            self.studentgrades = dict(studentgrades)
+        else:
+            self.studentgrades = {}
+        self.dict_key = dict_key
+
+    def __iter__(self):
+        return iter(self.studentgrades)
+
+    def __str__(self):
+        result = str(self.outofs) + '\n\n'
+
+        student_list = _sorted_student_grades(self.studentgrades)
+        for student, grades in student_list:
+            result += '{}: {},{}\n'.format(student.student_number,
+                                           student, grades)
+        return result
+
+    def get_students(self):
+        '''Return a Students object with this StudentGrades' students.'''
+
+        return Students(record[0] for record in self.studentgrades.values())
+
+    @staticmethod
+    def load_quercus_grades_file(infile, dict_key='student_number'):
+        '''Read Quercus CSV Gradebook.
+        The default dictionary key is student_number. Another common
+        use case would be 'utorid'.
+
+        '''
+
+        reader = csv.DictReader(infile)
+        dict_key_to_student_grades = {}
+
+        for row in reader:
+            first = row['Student'].strip()
+            if first in ('', 'Student, Test'):
+                continue
+            if first == 'Points Possible':
+                outofs = _make_out_of_from_quercus_row(row)
+                continue
+
+            student = _make_student_from_quercus_row(row)
+            grades = _make_grades_from_quercus_row(row)
+
+            try:
+                key = getattr(student, dict_key)
+                dict_key_to_student_grades[key] = (student, grades)
+            except AttributeError:
+                print('WARNING: This student does not have attribute {}:\n\t{}'.format(
+                    dict_key, student))
+
+        return StudentGrades(outofs, dict_key_to_student_grades, dict_key)
+
+    @staticmethod
+    def load_gf_file(infile, dict_key='student_number'):
+        '''Read gf grades file.
+
+        The default dictionary key is student_number. Another common
+        use case would be 'utorid'.
+
+        '''
+
+        dict_key_to_student_grades = {}
+
+        lines = infile.readlines()
+        sep = lines.index('\n')
+
+        header = lines[:sep + 1]
+        assts, outofs = _make_out_of_from_gf_header(header)
+
+        for line in lines[sep + 1:]:
+            student = _make_student_from_gf_line(line)
+            grades = _make_grades_from_gf_line(line, assts)
+
+            try:
+                key = getattr(student, dict_key)
+                dict_key_to_student_grades[key] = (student, grades)
+            except AttributeError:
+                print('WARNING: This student does not have attribute {}:\n\t{}'.format(
+                    dict_key, student))
+
+        return StudentGrades(outofs, dict_key_to_student_grades, dict_key)
+
+
+class InvalidStudentInfoError(Exception):
+    '''Exception raised on attempt to create Student with invalid fields.
+    '''
+
+    def __init__(self, field, value):
+        '''field: name of kwarg that is invalid
+        value: value of kwarg that is invalid'''
+
+        Exception.__init__(self)
+        self.message = 'Cannot create Student with given {}: {}.'.format(
+            field, value)
+
+
+def _sorted_student_grades(stnum_to_student_grades, key=DEFAULT_STUDENT_SORT):
+    student_grades_list = list(stnum_to_student_grades.values())
+    def sort_key(record): return key(record[0])
+    student_grades_list.sort(key=sort_key)
+    return student_grades_list
+
+
+def _make_student_from_gf_line(line):
+
+    fields = line.strip().split(',')
+    match = re.fullmatch(
+        r'(\d+) [ dx][ dx] ([\w-]+)((\s+([\w-]+))+)', fields[0])
+
+    stunum = match.group(1)
+    last = match.group(2)
+    first = match.group(3).strip()
+    utorid = fields[1] if len(fields) > 1 and not fields[1].isdigit() else None
+
+    return Student(student_number=stunum, first=first, last=last, utorid=utorid)
+
+
+def _make_grades_from_gf_line(line, assts):
+    grades = Grades()
+    fields = line.strip().split(',')
+    if len(fields) == 1:
+        return grades
+
+    if not fields[1].isdigit():
+        fields = fields[2:]
+    else:
+        fields = fields[1:]
+
+    grades.add_grades(zip(assts, fields))
+    return grades
+
+
+def _make_out_of_from_gf_header(header):
+    # TODO FIX collecting calculated grades
+    outofs = {}
+    assts = []
+    for line in header:
+        match = re.fullmatch(r'(\w+)\s*/\s*(\d+)\n', line)
+        if match:
+            asst = _clean_asst(match.group(1))
+            outof = _clean_grade(match.group(2))
+            outofs[asst] = outof
+            assts.append(asst)
+            continue
+        match = re.match(r'(\w+)\s*=', line)  # calculated grade
+        if match:
+            asst = _clean_asst(match.group(1))
+            outof = DEFAULT_FORMULA_OUTOF
+            outofs[asst] = outof
+            assts.append(asst)
+            continue
+    return (assts, outofs)
 
 
 def _clean_grade(grade):
@@ -465,14 +595,38 @@ def _contains_student_data_quercus(row):
             names.strip() != 'Student, Test')
 
 
-class InvalidStudentInfoError(Exception):
-    '''Exception raised on attempt to create Student with invalid fields.
-    '''
+def _make_gf_header(outofs=None, utorid=False):
+    '''outofs is a List[(asst, grade)], as it must be ordered for gf.'''
 
-    def __init__(self, field, value):
-        '''field: name of kwarg that is invalid
-        value: value of kwarg that is invalid'''
+    if outofs is None:
+        outofs = []
+    header = '*/,\n'
+    if utorid:
+        header = header + 'utorid " ! , 9\n'
+    for asst, outof in outofs:
+        # gf does not like spaces and parens in asst names
+        asst = asst.replace('(', '_').replace(')', '_').replace(' ', '_')
+        header = header + \
+            '{} / {}\n'.format(asst, int(outof))
+    return header
 
-        Exception.__init__(self)
-        self.message = 'Cannot create Student with given {}: {}.'.format(
-            field, value)
+
+def _make_gf_student_line(student, utorid=False, grades=None, outofs=None):
+    '''outofs is a List[(asst, grade)], as it must be ordered for gf.
+    Either both grades and outofs are None (no grades) or
+    both are not None (grades recorded).'''
+
+    if grades is None:
+        grades = {}
+
+    line = '{}    {} {}{}'.format(
+        student.student_number,
+        student.last if student.last else '',
+        student.first if student.first else '',
+        ',{}'.format(student.utorid) if utorid else '')
+
+    line = (line + ',' +
+            ','.join([str(round(grades.get_grade(asst), 1)) for (asst, grade) in outofs]) +
+            '\n')
+
+    return line
