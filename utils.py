@@ -24,6 +24,7 @@ DEFAULT_FORMULA_OUTOF = 100
 def DEFAULT_STUDENT_SORT(student): return student.last + student.first
 
 
+# def make_csv_grades_file
 def make_classlist(students, outfile, attrs=DEFAULT_STUDENT_STR,
                    header=False, key=DEFAULT_STUDENT_SORT):
     '''Write out a CSV classlist to outfile.
@@ -335,19 +336,22 @@ class Grades:
 class StudentGrades:
     '''My own gradebook.'''
 
-    def __init__(self, outofs=None, studentgrades=None, dict_key='student_number'):
-        '''Init an empty Gradesfile.'''
+    def __init__(self, outofs=None, studentgrades=None,
+                 dict_key='student_number', comments=None):
+        '''Init a Gradesfile given:
 
-        if outofs:
-            self.outofs = dict(outofs)
-        else:
-            self.outofs = {}
+        outofs: Dict[str, float] maps assigment name to max possible grade.
+        studentgrades: Dict[dict_key, Tuple(Student, Grades)].
+        dict_key: a Student attribute; key into studentgrades and comments.
+           Most likely student_number or utorid.
+        comments: Dict[dict_key, str].
 
-        if studentgrades:
-            self.studentgrades = dict(studentgrades)
-        else:
-            self.studentgrades = {}
+        '''
+
+        self.outofs = dict(outofs) if outofs else {}
+        self.studentgrades = dict(studentgrades) if studentgrades else {}
         self.dict_key = dict_key
+        self.comments = dict(comments) if comments else {}
 
     def __iter__(self):
         return iter(self.studentgrades)
@@ -357,14 +361,36 @@ class StudentGrades:
 
         student_list = _sorted_student_grades(self.studentgrades)
         for student, grades in student_list:
-            result += '{}: {},{}\n'.format(student.student_number,
-                                           student, grades)
+            key = getattr(student, self.dict_key)
+            result += '{}: {},{},{}\n'.format(
+                key,
+                student,
+                grades,
+                self.comments.get(key, ''))
         return result
 
     def get_students(self):
         '''Return a Students object with this StudentGrades' students.'''
 
         return Students(record[0] for record in self.studentgrades.values())
+
+    def get_dict(self, key):
+        '''Return a Dict[key, Tuple(Student, Grades).
+        Useful when self.key = 'student_number' and we want the dict by 'utorid',
+        for example.'''
+
+        if key == self.dict_key:
+            return self.studentgrades
+
+        new_key_to_student_grades = {}
+        for student, grades in self.studentgrades.values():
+            try:
+                key = getattr(student, key)
+                new_key_to_student_grades[key] = (student, grades)
+            except AttributeError:
+                print('WARNING: This student does not have attribute {}:\n\t{}'.format(
+                    key, student))
+        return new_key_to_student_grades
 
     @staticmethod
     def load_quercus_grades_file(infile, dict_key='student_number'):
@@ -406,16 +432,21 @@ class StudentGrades:
 
         '''
 
-        dict_key_to_student_grades = {}
-
         lines = infile.readlines()
         sep = lines.index('\n')
 
         header = lines[:sep + 1]
         assts, outofs = _make_out_of_from_gf_header(header)
 
+        stnum_to_student_grades = {}  # gf files are by student number
+        comments = {}
         for line in lines[sep + 1:]:
             student = _make_student_from_gf_line(line)
+            if not student:  # this is a comment/individual formula line
+                comment = _make_comment_from_gf_line(line)
+
+                continue
+
             grades = _make_grades_from_gf_line(line, assts)
 
             try:
@@ -454,6 +485,10 @@ def _make_student_from_gf_line(line):
     match = re.fullmatch(
         r'(\d+) [ dx][ dx] ([\w-]+)((\s+([\w-]+))+)', fields[0])
 
+    # this is not a gf line with student information (e.g., a comment line)
+    if match is None:
+        return None
+
     stunum = match.group(1)
     last = match.group(2)
     first = match.group(3).strip()
@@ -465,6 +500,13 @@ def _make_student_from_gf_line(line):
 def _make_grades_from_gf_line(line, assts):
     grades = Grades()
     fields = line.strip().split(',')
+    match = re.fullmatch(
+        r'(\d+) [ dx][ dx] ([\w-]+)((\s+([\w-]+))+)', fields[0])
+
+    # this is not a gf line with student information (e.g., a comment line)
+    if match is None:
+        return None
+
     if len(fields) == 1:
         return grades
 
