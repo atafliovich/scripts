@@ -220,17 +220,13 @@ class Student:
                      for attr in EQ_STUDENTS)
         return result
 
-    def full_str(self, ordering=DEFAULT_STUDENT_STR):
+    def full_str(self, attrs=DEFAULT_STUDENT_STR):
         '''Return a customized str representation of this Student.
-        ordering is the other of Student attributes.
+        attrs is an iterable of Student attributes to include, in order.
         '''
 
-        attrs = []
-        for attr_name in ordering:
-            attr = getattr(self, attr_name)
-            if attr:
-                attrs.append(attr)
-        return ','.join(attrs)
+        return ','.join([getattr(self, attr) if getattr(self, attr) else ''
+                         for attr in attrs])
 
     @staticmethod
     def make_student_from_gf_line(line):

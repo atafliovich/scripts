@@ -6,7 +6,7 @@ import math
 import re
 
 from defaults import default_student_sort, DEFAULT_FORMULA_OUTOF
-from shared import _make_gf_header, _make_gf_student_line
+from shared import _make_gf_header, _make_gf_student_line, _make_csv_header
 from students import Student, Students
 
 SEARCH_BY = ('student_number', 'utorid', 'gitid')
@@ -235,15 +235,15 @@ class GradeBook:
         self.studentgrades = dict_key_to_student_grades
         self.comments = dict_key_to_comments
 
-    def write_gf(self, outfile, outofs=None, utorid=True, key=default_student_sort):
+    def write_gf(self, outfile, assts=None, utorid=True, key=default_student_sort):
         '''Write a gf file to outfile.
 
-        outofs is an iterable of asst names: the order in which they will appear in the gf.
-          If outofs is None, the order will be alphabetical.
+        assts is an iterable of asst names: the order in which they will appear in the gf.
+          If assts is None, the order will be alphabetical and all grades will be included.
         utorid: Include a field for utorid?
         '''
 
-        outofs = _sort_outofs(self.outofs, outofs)
+        outofs = _sort_outofs(self.outofs, assts)
         header = _make_gf_header(outofs, utorid)
         outfile.write(header + '\n')
 
@@ -253,6 +253,45 @@ class GradeBook:
             line = _make_gf_student_line(
                 student, utorid, grades, outofs, comment)
             outfile.write(line)
+
+    def write_quercus_file(self, outfile, assts=None, key=default_student_sort):
+        '''Write a quercus grades file to outfile.
+
+        assts is an iterable of asst names: the order in which they will appear in the gf.
+          If assts is None, the order will be alphabetical and all grades will be included.
+        '''
+
+        # TODO
+        pass
+
+    def write_csv_grades_file(self, outfile, student_attrs=None,
+                              header=True, comments=True, assts=None,
+                              key=default_student_sort):
+        '''Write a csv grades file to outfile.
+
+        student_attrs is an iterable of Student attributes to be included in the file, in
+           the order in which they will appear.
+        assts is an iterable of asst names: the order in which they will appear in the gf.
+          If assts is None, the order will be alphabetical and all grades will be included.
+        comments: include comments as a last column?
+        '''
+
+        if student_attrs is None:
+            student_attrs = []
+        if assts is None:
+            assts = []
+
+        if header:
+            outfile.write(_make_csv_header(student_attrs, assts))
+
+        student_grades_list = _sorted_student_grades(self.studentgrades, key)
+        for student, grades in student_grades_list:
+            student_grades = ','.join(
+                [',{}'.format(grades.get_grade(asst)) for asst in assts])
+            student_comment = (',{}'.format(self.comments.get(getattr(student, self.dict_key), ''))
+                               if comments else '')
+            outfile.write('{}{}{}\n'.format(
+                student.full_str(student_attrs), student_grades, student_comment))
 
     def write_csv_submit_file(self, outfile, asst='all',
                               exam_no_shows=None, attribute='student_number'):
@@ -503,11 +542,11 @@ def _validate(student_grades, dict_key, outofs, comments):
     assert all(key in student_grades for key in comments)
 
 
-#loaded_one = GradeBook.load_quercus_grades_file(open('tests/quercus.csv'))
-#loaded_two = GradeBook.load_quercus_grades_file(open('tests/quercus.csv'))
-#loaded_two = GradeBook.load_gf_file(open('tests/grades.gf'))
-#print(loaded_one == loaded_two)
-#print(loaded_one.get_students() == loaded_two.get_students())
+# loaded_one = GradeBook.load_quercus_grades_file(open('tests/quercus.csv'))
+# loaded_two = GradeBook.load_quercus_grades_file(open('tests/quercus.csv'))
+# loaded_two = GradeBook.load_gf_file(open('tests/grades.gf'))
+# print(loaded_one == loaded_two)
+# print(loaded_one.get_students() == loaded_two.get_students())
 
 loaded_one = GradeBook.load_quercus_grades_file(open('tests/quercus.csv'))
 loaded_one.write_gf(open('grades.gf', 'w'))
@@ -515,5 +554,7 @@ loaded_two = GradeBook.load_gf_file(open('grades.gf'))
 print(loaded_one == loaded_two)
 # loaded.write_gf(open('new_grades.gf', 'w'), [
 #                'Midtem__337441_', 'Project__337474_', 'Exercises__337442_'])
-loaded_two.write_csv_submit_file(open('submit.csv', 'w'), 'Exam', [
-    '1003336320', '0999617856'])
+# loaded_two.write_csv_submit_file(open('submit.csv', 'w'), 'Exam', [
+#    '1003336320', '0999617856'])
+loaded_one.write_csv_grades_file(
+    open('grades.csv', 'w'), ('last', 'first', 'student_number', 'gitid', 'utorid'))

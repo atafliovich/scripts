@@ -43,3 +43,9 @@ def _make_gf_student_line(student, utorid=False, grades=None, outofs=None, comme
         line += '{}* {}\n'.format(student.student_number, comment)
 
     return line
+
+
+def _make_csv_header(student_attrs, assts):
+    '''Make a header for a CSV grades file.'''
+
+    return ','.join(list(student_attrs) + list(assts)) + '\n'
