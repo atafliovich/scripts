@@ -9,6 +9,8 @@ from defaults import default_student_sort, DEFAULT_FORMULA_OUTOF
 from shared import _make_gf_header, _make_gf_student_line
 from students import Student, Students
 
+SEARCH_BY = ('student_number', 'utorid', 'gitid')
+
 
 class GradeBook:
     '''My own gradebook.'''
@@ -28,9 +30,20 @@ class GradeBook:
         self.outofs = dict(outofs) if outofs else {}
         self.studentgrades = dict(studentgrades) if studentgrades else {}
         self.dict_key = dict_key
-        # TODO validate_studentgrades(self.student_grades, self.dict_key, self.outofs)
         self.comments = dict(comments) if comments else {}
-        # TODO validate_comments(self.comments, self.dict_key)
+        _validate(self.studentgrades, self.dict_key,
+                  self.outofs, self.comments)
+
+    def sanity_check(self):
+        '''Check validity of this GradeBook.'''
+
+        try:
+            _validate(self.studentgrades, self.dict_key,
+                      self.outofs, self.comments)
+        except AssertionError as error:
+            print('WARNING: Invalid GradeBook. {}'.format(error))
+            return False
+        return True
 
     def __iter__(self):
         return iter(self.studentgrades)
@@ -48,8 +61,43 @@ class GradeBook:
                 self.comments.get(key, ''))
         return result
 
+    def __len__(self):
+        return len(self.studentgrades)
+
+    def __eq__(self, other):
+
+        if len(self.studentgrades) != len(other.studentgrades):
+            return False
+
+        if self.outofs != other.outofs:
+            return False
+
+        for (student, grades) in self.studentgrades.values():
+            search_attrs = dict(
+                (attr, getattr(student, attr))
+                for attr in SEARCH_BY if getattr(student, attr) is not None)
+            other_record = other.get_student_info(search_attrs)
+            if not other_record:
+                print("not other record")
+                return False
+            if grades != other_record[1]:
+                print("different grades", grades, other_record[1])
+                return False
+        return True
+
+    def get_student_info(self, search_by):
+        '''search_by is a Dict[attribute, attr_value]. Return (Student,
+        Grades) if a Student matches any of the search_by, or None if
+        no such Student.'''
+
+        for student, grades in self.studentgrades.values():
+            if any(getattr(student, attribute) == attr_value
+                   for attribute, attr_value in search_by.items()):
+                return (student, grades)
+        return None
+
     def get_students(self):
-        '''Return a Students object with this StudentGrades' students.'''
+        '''Return a Students object with this Gradebook' students.'''
 
         return Students(record[0] for record in self.studentgrades.values())
 
@@ -183,20 +231,12 @@ class GradeBook:
     def write_gf(self, outfile, outofs=None, utorid=True, key=default_student_sort):
         '''Write a gf file to outfile.
 
-        outofs is an iterable of asst names: the order in which they will appear in the gf
+        outofs is an iterable of asst names: the order in which they will appear in the gf.
           If outofs is None, the order will be alphabetical.
         utorid: Include a field for utorid?
         '''
 
-        if outofs is None:
-            outofs = sorted(self.outofs.items(), key=lambda pair: pair[0])
-        else:
-            try:
-                outofs = [(asst, self.outofs[asst]) for asst in outofs]
-            except KeyError as error:
-                raise KeyError(
-                    'Invalid assignment list {}: {}'.format(outofs, error))
-
+        outofs = _sort_outofs(self.outofs, outofs)
         header = _make_gf_header(outofs, utorid)
         outfile.write(header + '\n')
 
@@ -207,7 +247,8 @@ class GradeBook:
                 student, utorid, grades, outofs, comment)
             outfile.write(line)
 
-    def write_csv_submit_file(self, outfile, asst='all', exam_no_shows=None, attribute='student_number'):
+    def write_csv_submit_file(self, outfile, asst='all',
+                              exam_no_shows=None, attribute='student_number'):
         '''Write a CSV submit file for eMarks to outfile.
 
         asst is the name of the "final mark" assignment
@@ -271,6 +312,11 @@ class Grades:
         except KeyError:
             raise KeyError('No such assignment: {}'.format(assignment))
 
+    def get_assignments(self):
+        '''Return a set of assignments in these Grades.'''
+
+        return set(self.grades.keys())
+
     @staticmethod
     def make_grades_from_quercus_row(row):
         '''Create and return a Grades from a row of Quercus file.
@@ -279,11 +325,10 @@ class Grades:
 
         grades = Grades()
         for asst, grade in row.items():
-            asst = _clean_asst(asst)
             if isinstance(grade, str) and grade.strip() == '':
                 grade = 0
-            if _is_quercus_asst_name(asst):
-                grades.add_grade(asst, _clean_grade(grade))
+            if _is_quercus_assignment(asst):
+                grades.add_grade(_clean_asst(asst), _clean_grade(grade))
         return grades
 
     @staticmethod
@@ -322,6 +367,9 @@ class Grades:
     def __str__(self):
         return str(self.grades)
 
+    def __eq__(self, other):
+        return self.grades == other.grades
+
 
 def _clean_grade(grade):
     try:
@@ -331,18 +379,23 @@ def _clean_grade(grade):
             grade, type(grade)))
 
 
-def _clean_asst(assignment):
-    if isinstance(assignment, str):
-        return assignment.strip()
-    raise TypeError('Invalid type for assignment: {} of type {}.'.format(
-        assignment, type(assignment)))
-
-
-def _is_quercus_asst_name(word):
+def _is_quercus_assignment(assignment):
     # assignments on Quercus are "AsstName (numericID)"
 
-    match = re.fullmatch(r'\w+\s\(\d+\)', word.strip())
-    return match is not None
+    return re.fullmatch(r'(\w+)\s\(\d+\)', assignment.strip()) is not None
+
+
+def _clean_asst(assignment):
+    # assignments on Quercus are "AsstName (numericID)"
+    # we will not store the numericID
+
+    if not isinstance(assignment, str):
+        raise TypeError('Invalid type for assignment: {} of type {}.'.format(
+            assignment, type(assignment)))
+
+    assignment = assignment.strip()
+    match = re.fullmatch(r'(\w+)\s\(\d+\)', assignment)
+    return match.group(1) if match else assignment
 
 
 def _make_out_of_from_quercus_row(row):
@@ -353,9 +406,8 @@ def _make_out_of_from_quercus_row(row):
 
     outofs = {}
     for key, value in row.items():
-        key = _clean_asst(key)
-        if _is_quercus_asst_name(key):
-            outofs[key] = _clean_grade(value)
+        if _is_quercus_assignment(key):
+            outofs[_clean_asst(key)] = _clean_grade(value)
     return outofs
 
 
@@ -398,6 +450,24 @@ def _contains_student_data_quercus(row):
             names.strip() != 'Student, Test')
 
 
+def _sort_outofs(outofs, asst_order):
+    '''Return a List[(asst, outof)] in the order in which asstignments
+    appear in asst_order. If asst_order is None, sort in alphabetical
+    order.
+    outofs is a Dict{asst, outof}
+    '''
+
+    if asst_order is None:
+        result = sorted(outofs.items(), key=lambda pair: pair[0])
+    else:
+        try:
+            result = [(asst, outofs[asst]) for asst in asst_order]
+        except KeyError as error:
+            raise KeyError(
+                'Invalid assignment list {}: {}'.format(outofs, error))
+    return result
+
+
 def _sorted_student_grades(stnum_to_student_grades, key=default_student_sort):
     student_grades_list = list(stnum_to_student_grades.values())
 
@@ -408,11 +478,25 @@ def _sorted_student_grades(stnum_to_student_grades, key=default_student_sort):
     return student_grades_list
 
 
-# loaded = GradeBook.load_quercus_grades_file(open('quercus.csv'))
+def _validate(student_grades, dict_key, outofs, comments):
+
+    for key, (student, grades) in student_grades.items():
+        assert getattr(student, dict_key) == key
+        assert grades.get_assignments() == outofs.keys()
+
+    assert all(key in student_grades for key in comments)
+
+
+loaded_one = GradeBook.load_quercus_grades_file(open('tests/quercus.csv'))
+loaded_two = GradeBook.load_quercus_grades_file(open('tests/quercus.csv'))
+# loaded_two = GradeBook.load_gf_file(open('tests/grades.gf'))
+print(loaded_one == loaded_two)
+# print(loaded_one.get_students() == loaded_two.get_students())
+
 # loaded.write_gf(open('grades.gf', 'w'), [
 #                'Exercises (337442)', 'Midtem (337441)', 'Project (337474)'])
-loaded = GradeBook.load_gf_file(open('grades.gf'))
+# loaded = GradeBook.load_gf_file(open('grades.gf'))
 # loaded.write_gf(open('new_grades.gf', 'w'), [
 #                'Midtem__337441_', 'Project__337474_', 'Exercises__337442_'])
-loaded.write_csv_submit_file(open('submit.csv', 'w'), 'all', [
-                             '1003336320', '0999617856'])
+# loaded.write_csv_submit_file(open('submit.csv', 'w'), 'all', [
+#                             '1003336320', '0999617856'])

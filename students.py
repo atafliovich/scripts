@@ -11,29 +11,34 @@ from defaults import (DEFAULT_STUDENT_STR, default_student_sort,
                       MAX_UTORID_LENGTH, STUDENT_NUMBER_LENGTH)
 from shared import _make_gf_header, _make_gf_student_line
 
+# two Student's are equal if they match on any of these attributes
+EQ_STUDENTS = ('student_number', 'utorid', 'gitid')
+
 
 class Students:
-    '''A collection of Students.'''
+    '''Students hashed by some dict_key.'''
 
-    def __init__(self, iterable=None):
+    def __init__(self, iterable=None, dict_key='student_number'):
         '''Initialize Students from iterable.'''
 
         if iterable:
-            self.students = set(iterable)
+            self.students = dict(
+                (getattr(student, dict_key), student) for student in iterable)
         else:
-            self.students = set()
+            self.students = {}
+        self.dict_key = dict_key
 
     def add_student(self, student):
         '''Add new student.'''
 
-        self.students.add(student)
+        self.students[getattr(student, self.dict_key)] = student
 
     @staticmethod
-    def load_intranet_classlist(infile):
+    def load_intranet_classlist(infile, dict_key='student_number'):
         '''Return a new Students created from an Intranet classlist csv file.'''
 
         reader = csv.DictReader(infile)
-        students = set()
+        students = Students(None, dict_key)
         for row in reader:
             names = row['My Students (Lname, Fname)'].split(',')
             student = Student(student_number=row['StudentID'],
@@ -43,28 +48,28 @@ class Students:
                               lecture=row['Lecture'],
                               tutorial=row['Tutorial']
                               )
-            students.add(student)
-        return Students(students)
+            students.add_student(student)
+        return students
 
     @staticmethod
-    def load_quercus_classlist(infile):
+    def load_quercus_classlist(infile, dict_key='student_number'):
         '''Return a new Students created from a Quercus possibly empty gradebook
         csv file.'''
 
         reader = csv.DictReader(infile)
-        students = set()
+        students = Students(None, dict_key)
         for row in reader:
             if not _contains_student_data_quercus(row):
                 continue
             student = Student.make_student_from_quercus_row(row)
-            students.add(student)
+            students.add_student(student)
 
-        return Students(students)
+        return students
 
     def __iter__(self):
         '''Return an Iterator over these Students.'''
 
-        return iter(self.students)
+        return iter(self.students.values())
 
     def write_classlist(self, outfile,
                         attrs=DEFAULT_STUDENT_STR, header=False,
@@ -77,7 +82,7 @@ class Students:
         header is True/False: whether to write the header
         '''
 
-        student_list = list(self.students)
+        student_list = list(self.students.values())
         student_list.sort(key=key)
         if header:
             outfile.write(','.join(list(attrs)) + '\n')
@@ -97,7 +102,7 @@ class Students:
         if outofs is None:
             outofs = {}
 
-        student_list = list(self.students)
+        student_list = list(self.students.values())
         student_list.sort(key=key)
 
         header = _make_gf_header(outofs, utorid)
@@ -132,7 +137,7 @@ class Students:
         '''
 
         attr2student = {}
-        for student in self.students:
+        for student in self.students.values():
             attr = getattr(student, attribute)
             if attr is not None:
                 attr2student[attr] = student
@@ -152,16 +157,21 @@ class Students:
         key is the key for sorting Students.
         '''
 
-        student_list = list(self.students)
+        student_list = list(self.students.values())
         student_list.sort(key=key)
         return ('{' + str([student.full_str(ordering)
                            for student in student_list])[1:-1] + '}')
 
+    def __len__(self):
+        return len(self.students)
+
     def __str__(self):
-        '''Return a default str representation of these Students.
-        '''
 
         return self.full_str(DEFAULT_STUDENT_STR, default_student_sort)
+
+    def __eq__(self, other):
+        return (len(self) == len(other) and
+                all(student in other for student in self.students.values()))
 
 
 class Student:
@@ -202,9 +212,13 @@ class Student:
                           sort_keys=True, indent=4)
 
     def __str__(self):
-        '''Return the default str representation on this Student.'''
 
         return self.full_str(DEFAULT_STUDENT_STR)
+
+    def __eq__(self, other):
+        result = any(getattr(self, attr) and (getattr(self, attr) == getattr(other, attr))
+                     for attr in EQ_STUDENTS)
+        return result
 
     def full_str(self, ordering=DEFAULT_STUDENT_STR):
         '''Return a customized str representation of this Student.
