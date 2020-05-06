@@ -11,6 +11,12 @@ from students import Student, Students
 
 SEARCH_BY = ('student_number', 'utorid', 'gitid')
 
+DEBUG = True
+
+
+def grades_equal(grade1, grade2):
+    return round(grade1, 1) == round(grade2, 1)
+
 
 class GradeBook:
     '''My own gradebook.'''
@@ -78,10 +84,11 @@ class GradeBook:
                 for attr in SEARCH_BY if getattr(student, attr) is not None)
             other_record = other.get_student_info(search_attrs)
             if not other_record:
-                print("not other record")
                 return False
             if grades != other_record[1]:
-                print("different grades", grades, other_record[1])
+                if DEBUG:
+                    print('different grades for {}: {} vs {}'.format(
+                        student, grades, other_record[1]))
                 return False
         return True
 
@@ -340,7 +347,7 @@ class Grades:
 
         fields = line.strip().split(',')
         match = re.fullmatch(
-            r'(\d+) [ dx][ dx] ([\w-]+)((\s+([\w-]+))+)', fields[0])
+            r'(\d+) [ dx][ dx] ([^,]+)((\s+([^,]+))+)', fields[0])
 
         # this is not a gf line with student information
         if match is None:
@@ -368,7 +375,16 @@ class Grades:
         return str(self.grades)
 
     def __eq__(self, other):
-        return self.grades == other.grades
+
+        if other is None:
+            return False
+
+        for asst, grade in self.grades.items():
+            if asst not in other.grades:
+                return False
+            if not grades_equal(grade, other.grades[asst]):
+                return False
+        return True
 
 
 def _clean_grade(grade):
@@ -482,21 +498,22 @@ def _validate(student_grades, dict_key, outofs, comments):
 
     for key, (student, grades) in student_grades.items():
         assert getattr(student, dict_key) == key
-        assert grades.get_assignments() == outofs.keys()
+        assert grades is None or grades.get_assignments() == outofs.keys()
 
     assert all(key in student_grades for key in comments)
 
 
-loaded_one = GradeBook.load_quercus_grades_file(open('tests/quercus.csv'))
-loaded_two = GradeBook.load_quercus_grades_file(open('tests/quercus.csv'))
-# loaded_two = GradeBook.load_gf_file(open('tests/grades.gf'))
-print(loaded_one == loaded_two)
-# print(loaded_one.get_students() == loaded_two.get_students())
+#loaded_one = GradeBook.load_quercus_grades_file(open('tests/quercus.csv'))
+#loaded_two = GradeBook.load_quercus_grades_file(open('tests/quercus.csv'))
+#loaded_two = GradeBook.load_gf_file(open('tests/grades.gf'))
+#print(loaded_one == loaded_two)
+#print(loaded_one.get_students() == loaded_two.get_students())
 
-# loaded.write_gf(open('grades.gf', 'w'), [
-#                'Exercises (337442)', 'Midtem (337441)', 'Project (337474)'])
-# loaded = GradeBook.load_gf_file(open('grades.gf'))
+loaded_one = GradeBook.load_quercus_grades_file(open('tests/quercus.csv'))
+loaded_one.write_gf(open('grades.gf', 'w'))
+loaded_two = GradeBook.load_gf_file(open('grades.gf'))
+print(loaded_one == loaded_two)
 # loaded.write_gf(open('new_grades.gf', 'w'), [
 #                'Midtem__337441_', 'Project__337474_', 'Exercises__337442_'])
-# loaded.write_csv_submit_file(open('submit.csv', 'w'), 'all', [
-#                             '1003336320', '0999617856'])
+loaded_two.write_csv_submit_file(open('submit.csv', 'w'), 'Exam', [
+    '1003336320', '0999617856'])
