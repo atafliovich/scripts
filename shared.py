@@ -45,7 +45,12 @@ def _make_gf_student_line(student, utorid=False, grades=None, outofs=None, comme
     return line
 
 
-def _make_csv_header(student_attrs, assts):
+def _make_csv_header(student_attrs, assts, comments, names=None):
     '''Make a header for a CSV grades file.'''
 
-    return ','.join(list(student_attrs) + list(assts)) + '\n'
+    if names is None:
+        names = {}
+    return (','.join(list(names.get(thing, thing) for thing in
+                          list(student_attrs) + list(assts))) +
+            ',{}\n'.format(names.get('comments', 'comments')
+                           if comments else '\n'))

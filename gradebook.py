@@ -266,7 +266,7 @@ class GradeBook:
 
     def write_csv_grades_file(self, outfile, student_attrs=None,
                               header=True, comments=True, assts=None,
-                              key=default_student_sort):
+                              key=default_student_sort, names=None):
         '''Write a csv grades file to outfile.
 
         student_attrs is an iterable of Student attributes to be included in the file, in
@@ -274,6 +274,10 @@ class GradeBook:
         assts is an iterable of asst names: the order in which they will appear in the gf.
           If assts is None, the order will be alphabetical and all grades will be included.
         comments: include comments as a last column?
+        names is Dict[asst-or-attr, new-name] specifies how the header is created, in case
+           we want it to be different from just the names of Student attributes and assignment
+           names as stored. One of the keys can be 'comments' to replace the word 'comments'
+           in the header.
         '''
 
         if student_attrs is None:
@@ -282,11 +286,12 @@ class GradeBook:
             assts = []
 
         if header:
-            outfile.write(_make_csv_header(student_attrs, assts))
+            outfile.write(_make_csv_header(
+                student_attrs, assts, comments, names))
 
         student_grades_list = _sorted_student_grades(self.studentgrades, key)
         for student, grades in student_grades_list:
-            student_grades = ','.join(
+            student_grades = ''.join(
                 [',{}'.format(grades.get_grade(asst)) for asst in assts])
             student_comment = (',{}'.format(self.comments.get(getattr(student, self.dict_key), ''))
                                if comments else '')
@@ -323,8 +328,11 @@ class GradeBook:
 class Grades:
     '''Essentially a dictionary of grades.'''
 
-    def __init__(self):
+    def __init__(self, grades=None):
         self.grades = {}
+        if grades:
+            for asst, grade in grades.items():
+                self.add_grade(asst, grade)
 
     def __iter__(self):
         return iter(self.grades)
@@ -548,13 +556,18 @@ def _validate(student_grades, dict_key, outofs, comments):
 # print(loaded_one == loaded_two)
 # print(loaded_one.get_students() == loaded_two.get_students())
 
-loaded_one = GradeBook.load_quercus_grades_file(open('tests/quercus.csv'))
-loaded_one.write_gf(open('grades.gf', 'w'))
-loaded_two = GradeBook.load_gf_file(open('grades.gf'))
-print(loaded_one == loaded_two)
+#loaded_one = GradeBook.load_quercus_grades_file(open('tests/quercus.csv'))
+#loaded_one.write_gf(open('grades.gf', 'w'))
+loaded = GradeBook.load_gf_file(open('grades.gf'))
+#print(loaded_one == loaded_two)
 # loaded.write_gf(open('new_grades.gf', 'w'), [
 #                'Midtem__337441_', 'Project__337474_', 'Exercises__337442_'])
 # loaded_two.write_csv_submit_file(open('submit.csv', 'w'), 'Exam', [
 #    '1003336320', '0999617856'])
-loaded_one.write_csv_grades_file(
-    open('grades.csv', 'w'), ('last', 'first', 'student_number', 'gitid', 'utorid'))
+loaded.write_csv_grades_file(
+    open('grades.csv', 'w'), ('last', 'first',
+                              'student_number', 'utorid'), True, True,
+    ('exs', 'proj', 'mid', 'exam', 'bonus', 'all'), default_student_sort,
+    {'last': 'Lastname', 'first': 'First name(s)', 'student_number': 'student number',
+     'utorid': 'UTORID', 'exs': 'Exercises (/15)', 'proj': 'Project (/55)', 'mid': 'Midterm (/38)',
+     'exam': 'Exam (/74)', 'all': 'Final grade (/100)'})
