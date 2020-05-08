@@ -9,11 +9,30 @@ STUDENT_NUMBER_LENGTH = 10
 DEFAULT_STUDENT_STR = ('last', 'first', 'student_number', 'utorid',
                        'gitid', 'email', 'lecture', 'tutorial', 'id1', 'id2')
 
-# TODO Fix this
-DEFAULT_FORMULA_OUTOF = 100
-
 
 def default_student_sort(student):
     '''Sort Student's by last name, then first name.'''
 
     return student.last + student.first
+
+
+# TODO Fix this
+DEFAULT_FORMULA_OUTOF = 100
+
+RESERVED_QUERCUS_COLUMNS = (
+    'Student', 'ID', 'SIS User ID', 'SIS Login ID', 'Integration ID', 'Section',
+    'Assignments Current Points',
+    'Assignments Final Points',
+    'Assignments Current Score',
+    'Assignments Unposted Current Score',
+    'Assignments Final Score',
+    'Assignments Unposted Final Score',
+    'Deliverables Current Points',
+    'Deliverables Final Points',
+    'Deliverables Current Score',
+    'Deliverables Unposted Current Score',
+    'Deliverables Final Score',
+    'Deliverables Unposted Final Score',
+    'Current Points', 'Final Points',
+    'Current Score', 'Unposted Current Score',
+    'Final Score', 'Unposted Final Score')

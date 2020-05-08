@@ -74,7 +74,7 @@ class TestLoadQuercusFile(unittest.TestCase):
 
         with open('quercus_test_file.csv') as infile:
             loaded = GradeBook.load_quercus_grades_file(infile, 'utorid')
-            self.ayssertEqual(
+            self.assertEqual(
                 self.gradebook, loaded,
                 'Incorrectly loaded Quercus grades file. GradeBooks differ:\n{}{}'.format(
                     self.gradebook, loaded))

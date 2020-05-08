@@ -5,7 +5,7 @@ import json
 import math
 import re
 
-from defaults import default_student_sort, DEFAULT_FORMULA_OUTOF
+from defaults import default_student_sort, DEFAULT_FORMULA_OUTOF, RESERVED_QUERCUS_COLUMNS
 from shared import _make_gf_header, _make_gf_student_line, _make_csv_header
 from students import Student, Students
 
@@ -444,8 +444,11 @@ def _clean_grade(grade):
 
 def _is_quercus_assignment(assignment):
     # assignments on Quercus are "AsstName (numericID)"
+    # OR not reserved ones??
+    # TODO
 
-    return re.fullmatch(r'(\w+)\s\(\d+\)', assignment.strip()) is not None
+    # return re.fullmatch(r'(\w+)\s\(\d+\)', assignment.strip()) is not None
+    return assignment.strip() not in RESERVED_QUERCUS_COLUMNS
 
 
 def _clean_asst(assignment):
