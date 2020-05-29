@@ -166,7 +166,6 @@ class GradeBook:
             if first == 'Points Possible':
                 outofs = _make_out_of_from_quercus_row(row)
                 continue
-
             student = Student.make_student_from_quercus_row(row)
             if not student:
                 continue
@@ -435,6 +434,8 @@ class Grades:
 
 
 def _clean_grade(grade):
+    if grade == '(read only)':
+        return 0.0
     try:
         return float(grade)
     except ValueError:
@@ -561,16 +562,16 @@ def _validate(student_grades, dict_key, outofs, comments):
 
 #loaded_one = GradeBook.load_quercus_grades_file(open('tests/quercus.csv'))
 #loaded_one.write_gf(open('grades.gf', 'w'))
-loaded = GradeBook.load_gf_file(open('grades.gf'))
+#loaded = GradeBook.load_gf_file(open('grades.gf'))
 #print(loaded_one == loaded_two)
 # loaded.write_gf(open('new_grades.gf', 'w'), [
 #                'Midtem__337441_', 'Project__337474_', 'Exercises__337442_'])
 # loaded_two.write_csv_submit_file(open('submit.csv', 'w'), 'Exam', [
 #    '1003336320', '0999617856'])
-loaded.write_csv_grades_file(
-    open('grades.csv', 'w'), ('last', 'first',
-                              'student_number', 'utorid'), True, True,
-    ('exs', 'proj', 'mid', 'exam', 'bonus', 'all'), default_student_sort,
-    {'last': 'Lastname', 'first': 'First name(s)', 'student_number': 'student number',
-     'utorid': 'UTORID', 'exs': 'Exercises (/15)', 'proj': 'Project (/55)', 'mid': 'Midterm (/38)',
-     'exam': 'Exam (/74)', 'all': 'Final grade (/100)'})
+# loaded.write_csv_grades_file(
+#     open('grades.csv', 'w'), ('last', 'first',
+#                               'student_number', 'utorid'), True, True,
+#     ('exs', 'proj', 'mid', 'exam', 'bonus', 'all'), default_student_sort,
+#     {'last': 'Lastname', 'first': 'First name(s)', 'student_number': 'student number',
+#      'utorid': 'UTORID', 'exs': 'Exercises (/15)', 'proj': 'Project (/55)', 'mid': 'Midterm (/38)',
+#      'exam': 'Exam (/74)', 'all': 'Final grade (/100)'})

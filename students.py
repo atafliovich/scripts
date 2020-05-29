@@ -71,6 +71,21 @@ class Students:
 
         return iter(self.students.values())
 
+    @staticmethod
+    def load_classlist(infile, attrs=DEFAULT_STUDENT_STR,
+                       dict_key='student_number'):
+        '''Return a new Students created from a classlist csv file.  attrs
+        correspond to the columns in the classlist file.
+
+        '''
+
+        reader = csv.reader(infile)
+        students = Students(None, dict_key)
+        for row in reader:
+            student = Student(**dict(zip(attrs, row)))
+            students.add_student(student)
+        return students
+
     def write_classlist(self, outfile,
                         attrs=DEFAULT_STUDENT_STR, header=False,
                         key=default_student_sort):
@@ -266,7 +281,7 @@ class Student:
                           first=names[1],
                           last=names[0],
                           lecture=sections[0],
-                          tutorial=sections[1],
+                          tutorial=sections[1] if len(sections) > 1 else '',
                           id1=row['ID'])
         return student
 
