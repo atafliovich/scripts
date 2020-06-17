@@ -1,6 +1,7 @@
 """Email marks, rubrics, autotester results, etc. to
 students. Basically, email text files to students.
 """
+# TODO: this needs updating to work with new utils
 
 import argparse
 import os

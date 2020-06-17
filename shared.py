@@ -1,4 +1,4 @@
-'''Shared helpers for various utils. Probablyu do not use directly.'''
+'''Shared helpers for various utils. Probably do not use directly.'''
 
 
 def _make_gf_header(outofs=None, utorid=False):

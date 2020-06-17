@@ -8,7 +8,8 @@ from email_validator import validate_email, EmailNotValidError
 
 
 from defaults import (DEFAULT_STUDENT_STR, default_student_sort,
-                      MAX_UTORID_LENGTH, STUDENT_NUMBER_LENGTH)
+                      DEFAULT_CATME_STR, MAX_UTORID_LENGTH,
+                      STUDENT_NUMBER_LENGTH)
 from shared import _make_gf_header, _make_gf_student_line
 
 # two Student's are equal if they match on any of these attributes
@@ -66,11 +67,6 @@ class Students:
 
         return students
 
-    def __iter__(self):
-        '''Return an Iterator over these Students.'''
-
-        return iter(self.students.values())
-
     @staticmethod
     def load_classlist(infile, attrs=DEFAULT_STUDENT_STR,
                        dict_key='student_number'):
@@ -127,6 +123,24 @@ class Students:
             line = _make_gf_student_line(student, utorid)
             outfile.write(line)
 
+    def write_catme(self, outfile, attrs=DEFAULT_CATME_STR,
+                    header=True, key=default_student_sort):
+        '''Write out a CATME student file to outfile.
+
+        outfile is the file to write to, open for writing.
+        attrs is an iterable of attributes of Student to include.
+        key is the key for sorting Students.
+        header is True/False: whether to write the header
+        '''
+
+        if header:
+            outfile.write('first,last,email,id,team\n')
+
+        student_list = list(self.students.values())
+        student_list.sort(key=key)
+        for student in student_list:
+            outfile.write(student.full_str(attrs) + '\n')
+
     def by_utorid(self):
         '''Return a Dict[utorid, Student]. Raises AttributeError if there is a
         Student with no utorid.'''
@@ -177,6 +191,11 @@ class Students:
         return ('{' + str([student.full_str(ordering)
                            for student in student_list])[1:-1] + '}')
 
+    def __iter__(self):
+        '''Return an Iterator over these Students.'''
+
+        return iter(self.students.values())
+
     def __len__(self):
         return len(self.students)
 
@@ -218,6 +237,7 @@ class Student:
         self.lecture = _clean(kwargs.get('lecture'))
         self.tutorial = _clean(kwargs.get('tutorial'))
         self.gitid = _clean(kwargs.get('gitid'))
+        self.team = _clean(kwargs.get('team'))
         self.id1 = _clean(kwargs.get('id1'))
         self.id2 = _clean(kwargs.get('id2'))
 

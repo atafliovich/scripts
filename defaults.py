@@ -9,6 +9,8 @@ STUDENT_NUMBER_LENGTH = 10
 DEFAULT_STUDENT_STR = ('last', 'first', 'student_number', 'utorid',
                        'gitid', 'email', 'lecture', 'tutorial', 'id1', 'id2')
 
+DEFAULT_CATME_STR = ('first', 'last', 'email', 'utorid', 'team')
+
 
 def default_student_sort(student):
     '''Sort Student's by last name, then first name.'''
