@@ -12,7 +12,7 @@ def generate_answer(variables, formula):
          'value': random.randint(variable['min'], variable['max'])}
         for variable in variables]
     answer_value = formula(answer_variables)
-    return {'weight': 100, 'variables': answer_variables, 'answer': answer_value}
+    return {'weight': 100, 'variables': answer_variables, 'answer_text': answer_value}
 
 
 def generate_answers(variables, formula, num):

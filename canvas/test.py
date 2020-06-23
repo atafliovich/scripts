@@ -129,8 +129,8 @@ Q5 = {
     'answers': [
         {'answer_text': 'nope1', 'weight': 0},
         # weight can assign partial marks? Doesn't look like it. Just 0 or non-0.
-        {'answer_text': 'nope2', 'weight': 0},
-        {'answer_text': 'yep', 'weight': 100},
+        {'answer_text': 'yep1', 'weight': 100},
+        {'answer_text': 'yep2', 'weight': 100},
         {'answer_text': 'nope3', 'weight': 0}
     ]
 }
@@ -166,7 +166,7 @@ Q8 = {
     'position': 9,
     'answers': [
         {"numerical_answer_type": "exact_answer",
-         "exact": 42, 'margin': '2', 'answer_weight': 100},
+         'answer_text': '', "exact": 42, 'margin': 2, 'answer_weight': 100},
     ]
 }
 
@@ -208,11 +208,13 @@ Q11 = {
 # https://community.canvaslms.com/groups/canvas-developers/blog/2019/05/11/using-python-to-create-calculated-questions
 
 TEXT = '''Suppose we begin with:
+<p>
 >>> a = [x]
 >>> b = [y]
 >>> b = a
 >>> a = [z]
 >>> b = b + 1
+</p>
 What is the value of b?
 '''
 
@@ -221,6 +223,7 @@ VARS = [{'name': 'x', 'min': 1.0, 'max': 10.0, 'scale': 0},
         {'name': 'z', 'min': 1.0, 'max': 20.0, 'scale': 0}]
 
 ANS = generate_answers(VARS, lambda vs: value_of('x', vs) + 1, 5)
+
 Q12 = {
     'question_name': 'Test Calculated Question 12',
     'question_type': 'calculated_question',
@@ -235,6 +238,8 @@ Q12 = {
 
 if __name__ == '__main__':
 
+    import sys
+
     # students = list(c01.get_users(enrollment_type=['student'], include=['email']))
     # TODO: write @static_method in Students load_from_quercus_API
 
@@ -245,10 +250,10 @@ if __name__ == '__main__':
     # quiz = c01.create_quiz(QUIZ)
 
     quiz = c01.get_quizzes(search_term='Test quiz')[0]  # in general?
-    # q1 = quiz.create_question(question=Q1)
-    # q2 = quiz.create_question(question=Q2)
-    # q3 = quiz.create_question(question=Q3)
-    # q4 = quiz.create_question(question=Q4)
-    q12 = quiz.create_question(question=Q12)
 
-    pass
+    QNS = [getattr(sys.modules[__name__], 'Q{}'.format(i)) for i in range(13)]
+
+    #qns = [quiz.create_question(question=QN) for QN in QNS]
+
+    # for q in quiz.get_questions():
+    #    q.delete()
