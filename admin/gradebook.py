@@ -5,9 +5,9 @@ import json
 import math
 import re
 
-from defaults import default_student_sort, DEFAULT_FORMULA_OUTOF, RESERVED_QUERCUS_COLUMNS
-from shared import _make_gf_header, _make_gf_student_line, _make_csv_header
-from students import Student, Students
+from .defaults import default_student_sort, DEFAULT_FORMULA_OUTOF, RESERVED_QUERCUS_COLUMNS
+from .shared import _make_gf_header, _make_gf_student_line, _make_csv_header
+from .students import Student, Students
 
 SEARCH_BY = ('student_number', 'utorid', 'gitid')
 

@@ -4,8 +4,8 @@ import re
 import sys
 import unittest
 
-from gradebook import GradeBook, Grades
-from students import Student
+from .gradebook import GradeBook, Grades
+from .students import Student
 
 astudent = {'last': 'Alastname', 'first': 'Afirstname',
             'utorid': 'aaaaaaaa', 'student_number': '1003336320'}

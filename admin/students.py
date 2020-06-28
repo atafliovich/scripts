@@ -7,10 +7,10 @@ import re
 from email_validator import validate_email, EmailNotValidError
 
 
-from defaults import (DEFAULT_STUDENT_STR, default_student_sort,
-                      DEFAULT_CATME_STR, MAX_UTORID_LENGTH,
-                      STUDENT_NUMBER_LENGTH)
-from shared import _make_gf_header, _make_gf_student_line
+from .defaults import (DEFAULT_STUDENT_STR, default_student_sort,
+                       DEFAULT_CATME_STR, MAX_UTORID_LENGTH,
+                       STUDENT_NUMBER_LENGTH)
+from .shared import _make_gf_header, _make_gf_student_line
 
 # two Student's are equal if they match on any of these attributes
 EQ_STUDENTS = ('student_number', 'utorid', 'gitid')

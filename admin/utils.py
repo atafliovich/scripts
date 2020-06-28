@@ -4,15 +4,8 @@ Work in progress.
 
 """
 
-from defaults import DEFAULT_STUDENT_STR, default_student_sort, DEFAULT_CATME_STR
-from gradebook import GradeBook
-
-
-'''
-# mongo "mongodb+srv://cluster0-8mamn.gcp.mongodb.net/test"  --username atafliovich
-CLIENT = MongoClient()
-DB = CLIENT.studentgrades
-'''
+from .defaults import DEFAULT_STUDENT_STR, default_student_sort, DEFAULT_CATME_STR
+from .gradebook import GradeBook
 
 
 # TODO def make_csv_grades_file
