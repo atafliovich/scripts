@@ -6,7 +6,7 @@ Full specs for QuizQuestion:
 '''
 
 from canvasapi import Canvas
-from generic import INTEGRITY_1, INTEGRITY_2
+from .generic import INTEGRITY_1, INTEGRITY_2
 
 API_URL = "https://q.utoronto.ca"
 
