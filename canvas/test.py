@@ -1,50 +1,64 @@
 '''
-Full API for Quiz:
+Full specs for Quiz:
  https://canvas.instructure.com/doc/api/quizzes.html
-Full API for QuizQuestion:
+Full specs for QuizQuestion:
  https://canvas.instructure.com/doc/api/quiz_questions.html#method.quizzes/quiz_questions.create
 '''
 
 from canvasapi import Canvas
-from canvasutils import generate_answers, value_of
+from generic import INTEGRITY_1, INTEGRITY_2
 
 API_URL = "https://q.utoronto.ca"
-API_KEY = "11834~SUp5EUiSGkgEtdEPHrDcWsv9UBhxmP6hVp5k2TXa36RqzY9dv4EwN7Go8VT0FHSo"
-C01 = "158528"
 
-canvas = Canvas(API_URL, API_KEY)
-c01 = canvas.get_course(C01)
+# TODO: Go to https://q.utoronto.ca/profile/settings to generate an
+# Access Token. Copy it immediately and paste here.
+API_KEY = ""
+
+CANVAS = Canvas(API_URL, API_KEY)
+
+# TODO: This is the course ID. The easiest way to get it is to look
+# the URL.  For example, my CSCC01 on Quercus is
+# https://q.utoronto.ca/courses/158528 and so the ID of this course is
+# "158528".
+COURSE_ID = "158528"
+
+COURSE = CANVAS.get_course(COURSE_ID)
 
 # Can use HTML in all text fields.
-QUIZ = {
-    'title': 'Test quiz',
-    'description': 'Test description',
-    'quiz_type': 'assignment',
+QUIZ_SETTINGS = {  # To understand what these are, mostly, take a look at the
+    # options on an "Edit Quiz" page on quercus.
+    'title': 'Test Quiz',
+    'description': '''<p>This is a sample quiz uploaded to quercus using the API.</p>
+    <p>You will be presented with one question at a time. Once you
+    submit an answer to a question, you <strong>cannot go
+    back</strong> to it.</p>''',
+    'quiz_type': 'assignment',  # 'practice_quiz', 'assignment', 'graded_survey', 'survey'
     # 'assignment_group_id': '',
-    'time_limit': '42',   # in minutes
-    # 'shuffle_answers': True/Fale,
-    'hide_results': 'always',
+    'time_limit': '180',   # in minutes
+    'shuffle_answers': True,
+    'hide_results': 'always',  # 'until_after_last_attempt'
     'show_correct_answers': False,
-    # 'show_correct_answers_at': '',
+    # 'show_correct_answers_at': '',  # timestamp
     # 'hide_correct_answers_at': '',
     # 'allowed_attempts': '',
-    # 'scoring_policy': '',
-    # 'one_question_at_a_time': '',
-    # 'cant_go_back': '',
+    # 'scoring_policy': '',  # 'keep_highest' or 'keep_latest' (only for multiple attempts)
+    'one_question_at_a_time': True,
+    'cant_go_back': True,
     # 'access_code': '',
     # 'ip_filter': '',
-    'due_at': '2020-06-22 16:00',
-    'lock_at': '2020-06-22 16:30',
-    'unlock_at': '2020-06-21 17:00',
-    # 'published': False,
+    'due_at': '2020-07-07 17:00',
+    'lock_at': '2020-07-07 17:00',
+    'unlock_at': '2020-07-07 14:00',
+    # Highly recommended to "publish" manually online once the quiz is fully set up
+    'published': False,
     # 'one_time_results': '',
     # 'only_visible_to_overrides': ''
 }
 
-# QUESTIONS
+######### QUESTIONS ##########
 
 Q0 = {
-    'question_name': 'Test True/False 0',
+    'question_name': 'Test True/False Question',
     'question_type': 'true_false_question',
     'question_text': 'true or false?',
     'points_possible': 16,
@@ -58,7 +72,7 @@ Q0 = {
 }
 
 Q1 = {
-    'question_name': 'Test MC 1',
+    'question_name': 'Test MC Question',
     'question_type': 'multiple_choice_question',
     'question_text': 'One, two, or three?',
     'points_possible': 5,
@@ -73,7 +87,7 @@ Q1 = {
 
 
 Q2 = {
-    'question_name': 'Test Multiple Dropdown 2',
+    'question_name': 'Test Multiple Dropdown Question',
     'question_type': 'multiple_dropdowns_question',
     'question_text': 'Here is the [Option1] and here is the [Option2] and done.',
     'points_possible': 6,
@@ -89,7 +103,7 @@ Q2 = {
 }
 
 Q3 = {
-    'question_name': 'Test Short Answer Question 3',
+    'question_name': 'Test Short Answer Question',
     'question_type': 'short_answer_question',
     'question_text': 'Your short answer, please.',
     'points_possible': 2,
@@ -106,7 +120,7 @@ not
 non'''
 
 Q4 = {
-    'question_name': 'Test Matching Question 4',
+    'question_name': 'Test Matching Question',
     'question_type': 'matching_question',
     'question_text': 'Matching left to right and right to left',
     'points_possible': 10,
@@ -121,14 +135,13 @@ Q4 = {
 }
 
 Q5 = {
-    'question_name': 'Test Multiple Answers 5',
+    'question_name': 'Test Multiple Answers Question',
     'question_type': 'multiple_answers_question',
     'question_text': 'There are multiple answers here',
     'points_possible': 5,
     'position': 6,
     'answers': [
         {'answer_text': 'nope1', 'weight': 0},
-        # weight can assign partial marks? Doesn't look like it. Just 0 or non-0.
         {'answer_text': 'yep1', 'weight': 100},
         {'answer_text': 'yep2', 'weight': 100},
         {'answer_text': 'nope3', 'weight': 0}
@@ -136,7 +149,7 @@ Q5 = {
 }
 
 Q6 = {
-    'question_name': 'Test File Upload 6',
+    'question_name': 'Test File Upload Question',
     'question_type': 'file_upload_question',
     'question_text': 'Here we upload a file',
     'points_possible': 5,
@@ -144,7 +157,7 @@ Q6 = {
 }
 
 Q7 = {
-    'question_name': 'Test Fill In Multiple Blanks 7',
+    'question_name': 'Test Fill In Multiple Blanks Question',
     'question_type': 'fill_in_multiple_blanks_question',
     'question_text': 'Fill in [Blank1] here and [Blank2] there.',
     'points_possible': 10,
@@ -159,7 +172,7 @@ Q7 = {
 }
 
 Q8 = {
-    'question_name': 'Test Numerical Question: exact 8',
+    'question_name': 'Test Numerical Question: exact',
     'question_type': 'numerical_question',
     'question_text': 'What is the exact number? yet within margin of error... ',
     'points_possible': 10,
@@ -171,7 +184,7 @@ Q8 = {
 }
 
 Q9 = {
-    'question_name': 'Test Numerical Question: precision 9',
+    'question_name': 'Test Numerical Question: precision',
     'question_type': 'numerical_question',
     'question_text': 'What is the answer (precision)',
     'points_possible': 10,
@@ -183,7 +196,7 @@ Q9 = {
 }
 
 Q10 = {
-    'question_name': 'Test Numerical Question: range 10',
+    'question_name': 'Test Numerical Question: range',
     'question_type': 'numerical_question',
     'question_text': 'What is the answer (range)',
     'points_possible': 10,
@@ -194,45 +207,12 @@ Q10 = {
     ]
 }
 
-
 Q11 = {
-    'question_name': 'Test Essay Question 11',
+    'question_name': 'Test Essay Question',
     'question_type': 'essay_question',
     'question_text': 'Free form answer / essay',
     'points_possible': 2,
     'position': 12
-}
-
-# Now this one can be pretty interesting!
-# Worth looking at:
-# https://community.canvaslms.com/groups/canvas-developers/blog/2019/05/11/using-python-to-create-calculated-questions
-
-TEXT = '''Suppose we begin with:
-<p>
->>> a = [x]
->>> b = [y]
->>> b = a
->>> a = [z]
->>> b = b + 1
-</p>
-What is the value of b?
-'''
-
-VARS = [{'name': 'x', 'min': 1.0, 'max': 10.0, 'scale': 0},
-        {'name': 'y', 'min': 10.0, 'max': 20.0, 'scale': 0},
-        {'name': 'z', 'min': 1.0, 'max': 20.0, 'scale': 0}]
-
-ANS = generate_answers(VARS, lambda vs: value_of('x', vs) + 1, 5)
-
-Q12 = {
-    'question_name': 'Test Calculated Question 12',
-    'question_type': 'calculated_question',
-    'question_text': TEXT,
-    'points_possible': 10,
-    'position': 13,
-    'formulas': ['b = x + 1'],
-    'variables': VARS,
-    'answers': ANS
 }
 
 
@@ -240,20 +220,11 @@ if __name__ == '__main__':
 
     import sys
 
-    # students = list(c01.get_users(enrollment_type=['student'], include=['email']))
-    # TODO: write @static_method in Students load_from_quercus_API
+    QUIZ = COURSE.create_quiz(QUIZ_SETTINGS)
 
-    # assignment_group = c01.create_assignment_group(
-    #    name='Test group', position=1, weight=0)
+    # Q1, Q2, ..., Q11
+    QNS = [getattr(sys.modules[__name__], 'Q{}'.format(i)) for i in range(12)]
 
-    # QUIZ.update({'assignment_group_id': assignment_group.id})
-    # quiz = c01.create_quiz(QUIZ)
-
-    quiz = c01.get_quizzes(search_term='Test quiz')[0]  # in general?
-
-    QNS = [getattr(sys.modules[__name__], 'Q{}'.format(i)) for i in range(13)]
-
-    #qns = [quiz.create_question(question=QN) for QN in QNS]
-
-    # for q in quiz.get_questions():
-    #    q.delete()
+    QUIZ.create_question(question=INTEGRITY_1)
+    QUESTIONS = [QUIZ.create_question(question=QN) for QN in QNS]
+    QUIZ.create_question(question=INTEGRITY_2)
