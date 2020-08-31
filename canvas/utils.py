@@ -37,7 +37,7 @@ def download_asst_grades(course, asst_name, key='student_number'):
     assignment = _get_assignment(course, asst_name)
     submissions = assignment.get_submissions()
 
-    attr2grade = {getattr(KEY_MAP[key], course.get_user(submission.user_id)):
+    attr2grade = {getattr(course.get_user(submission.user_id), KEY_MAP[key]):
                   float(submission.score) if submission.score else 0.0
                   for submission in submissions}
 
