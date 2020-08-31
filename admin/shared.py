@@ -13,10 +13,9 @@ def _make_gf_header(outofs=None, utorid=False):
     if utorid:
         header = header + 'utorid " ! , 9\n'
     for asst, outof in outofs:
-        # gf does not like spaces and parens in asst names
-        asst = asst.replace('(', '_').replace(')', '_').replace(' ', '_')
-        header = header + \
-            '{} / {}\n'.format(asst, int(outof))
+        # gf does not like spaces, hyphens, and parens in asst names
+        asst = asst.replace('(', '_').replace(')', '_').replace(' ', '_').replace('-', '_')
+        header = header + '{} / {}\n'.format(asst, int(outof))
     return header
 
 

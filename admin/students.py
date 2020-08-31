@@ -53,21 +53,6 @@ class Students:
         return students
 
     @staticmethod
-    def load_quercus_classlist(infile, dict_key='student_number'):
-        '''Return a new Students created from a Quercus possibly empty gradebook
-        csv file.'''
-
-        reader = csv.DictReader(infile)
-        students = Students(None, dict_key)
-        for row in reader:
-            if not _contains_student_data_quercus(row):
-                continue
-            student = Student.make_student_from_quercus_row(row)
-            students.add_student(student)
-
-        return students
-
-    @staticmethod
     def load_classlist(infile, attrs=DEFAULT_STUDENT_STR,
                        dict_key='student_number'):
         '''Return a new Students created from a classlist csv file.  attrs
@@ -264,7 +249,7 @@ class Student:
                          for attr in attrs])
 
     @staticmethod
-    def make_student_from_gf_line(line):
+    def make_student_from_gf_line(line, use_utorid=True):
         '''Create a Student from line from a gf file. Return None on a line
         that does not contain student information.'''
 
@@ -279,31 +264,14 @@ class Student:
         stunum = match.group(1)
         last = match.group(2)
         first = match.group(3).strip()
-        utorid = fields[1] if len(
-            fields) > 1 and not fields[1].isdigit() else None
+
+        if use_utorid:
+            utorid = fields[1] if len(
+                fields) > 1 and not fields[1].isdigit() else None
+        else:
+            utorid = None
 
         return Student(student_number=stunum, first=first, last=last, utorid=utorid)
-
-    @staticmethod
-    def make_student_from_quercus_row(row):
-        '''Create and return a Student from a row of Quercus file. Return None if row
-        does not contain student data.
-
-        '''
-
-        if not _contains_student_data_quercus(row):
-            return None
-
-        names = row['Student'].split(',')
-        sections = row['Section'].split(' and ')
-        student = Student(student_number=row['Integration ID'],
-                          utorid=row['SIS User ID'],
-                          first=names[1],
-                          last=names[0],
-                          lecture=sections[0],
-                          tutorial=sections[1] if len(sections) > 1 else '',
-                          id1=row['ID'])
-        return student
 
 
 class InvalidStudentInfoError(Exception):
@@ -318,16 +286,6 @@ class InvalidStudentInfoError(Exception):
         Exception.__init__(self)
         self.message = 'Cannot create Student with given {}: {}.'.format(
             attribute, value)
-
-
-def _contains_student_data_quercus(row):
-    '''Does this row contain student info?'''
-
-    names = row['Student']
-    return (names is not None and
-            names.strip() != '' and
-            names.strip() != 'Points Possible' and
-            names.strip() != 'Student, Test')
 
 
 def _clean(word):
