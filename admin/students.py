@@ -283,9 +283,9 @@ class InvalidStudentInfoError(Exception):
         value: value of invalid attribute
         '''
 
-        Exception.__init__(self)
-        self.message = 'Cannot create Student with given {}: {}.'.format(
+        message = 'Cannot create Student with given {}: {}.'.format(
             attribute, value)
+        Exception.__init__(self, message)
 
 
 def _clean(word):
