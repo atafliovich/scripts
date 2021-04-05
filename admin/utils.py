@@ -4,6 +4,7 @@ Work in progress.
 
 """
 
+
 def make_team_to_students(students):
     '''Return a dict mapping team name to Student list.
     students is a Students object. Each Student must heave team attribute set.

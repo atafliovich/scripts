@@ -67,6 +67,36 @@ class Students:
             students.add_student(student)
         return students
 
+    # def update(self, updatefrom):
+    #     """Update all student information with information form
+    #     updatefrom. Every non-None Student field in updatefrom will
+    #     overwrite the correspiding field in this Students. Useful to
+    #     update email addresses which are all avaiable on Intranet but
+    #     some missing on Quercus.
+
+    #     """
+
+    #     pass
+
+    def _update_emails(self, updatefrom):
+        """Only here to address the Quercus no-emails bug.
+
+        Update emails of the form utorid@mail.utoronto.ca (or None)
+        with information in updatefrom.
+
+        updatefrom is Students with the same dict_key as self.
+
+        """
+
+        for key, student in self.students.items():
+            try:
+                if (student.email is None or
+                        '.' not in student.email.split('@')[0]):
+                    student.email = updatefrom.students[key].email
+            except KeyError:
+                print('{} not in Students to update from'.format(key))
+                continue
+
     def write_classlist(self, outfile,
                         attrs=DEFAULT_STUDENT_STR, header=False,
                         key=default_student_sort):
@@ -194,6 +224,7 @@ class Students:
 
 
 class Student:
+
     """A representation of a student.
     """
 

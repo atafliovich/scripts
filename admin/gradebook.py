@@ -145,7 +145,6 @@ class GradeBook:
                     key, student))
         return new_key_to_student_grades
 
-
     @staticmethod
     def load_gf_file(infile, dict_key='student_number', use_utorid=True):
         """Read gf grades file and create a new GradeBook. This GradeBook will
@@ -195,9 +194,11 @@ class GradeBook:
                     key, student))
                 continue
             dict_key_to_student_grades[new_key] = (student, grades)
-            dict_key_to_comments[new_key] = self.comments[old_key]
+            if old_key in self.comments:
+                dict_key_to_comments[new_key] = self.comments[old_key]
         self.studentgrades = dict_key_to_student_grades
         self.comments = dict_key_to_comments
+        self.dict_key = key
 
     def write_gf(self, outfile, assts=None, utorid=True, key=default_student_sort):
         """Write a gf file to outfile.
@@ -388,7 +389,7 @@ class Grades:
 
 
 def _clean_grade(grade):
-    if grade == '(read only)':
+    if grade == '' or str(grade).lower() == 'gwr':
         return 0.0
     try:
         return float(grade)

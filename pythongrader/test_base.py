@@ -40,20 +40,21 @@ class TestBase(unittest.TestCase):
 
         """
 
+        args_copy = copy.deepcopy(args)
         try:
             returned = func(*args)
         except Exception as exn:
-            return (False, _make_error_msg(func, args, exn))
+            return (False, _make_error_msg(func, args_copy, exn))
 
         try:
             as_expected = comparator(expected, returned)
         except Exception as exn:
-            return (False, _make_compare_msg(func, args, expected, exn))
+            return (False, _make_compare_msg(func, args_copy, expected, exn))
 
         if as_expected:
             return (True, '')
 
-        return (False, _make_failure_msg(func, args, expected, returned))
+        return (False, _make_failure_msg(func, args_copy, expected, returned))
 
     # Most likely you can use this method as is. If not, look at
     # helpers below to override.
@@ -211,7 +212,7 @@ class TestBase(unittest.TestCase):
 
         """
 
-        test_module = sys.modules[MODULENAME]
+        test_module = sys.modules[self._get_module_name()]
         for fname, mock in fnames_to_mocks.items():
             setattr(test_module, fname, mock)
 
@@ -241,9 +242,13 @@ def _make_failure_mutation_msg(func: callable, args: list, mutated_index: int,
 
 
 def _make_failure_no_mutation_msg(func: callable, args: list, args_mut: list) -> str:
-    """Return a failure message: func(args) should not mutate, new values are args_mut."""
+    """Return a failure message: func(args) should not mutate, new values
+    are args_mut.
 
-    return FAILURE_MESSAGE_NO_MUTATION.format(_make_call_string(func, args), args_mut)
+    """
+
+    return FAILURE_MESSAGE_NO_MUTATION.format(_make_call_string(func, args),
+                                              args_mut)
 
 
 def _make_error_msg(func: callable, args: list,

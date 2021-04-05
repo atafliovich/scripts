@@ -9,8 +9,8 @@ import sys
 from canvasapi import Canvas
 
 sys.path.append('/home/anya/scripts')  # NOQA: E402
-import admin.gradebook as gb
-import admin.students as sts
+import admin.gradebook as gb  # noqa
+import admin.students as sts  # noqa
 
 API_URL = 'https://q.utoronto.ca'
 
@@ -25,15 +25,15 @@ API_KEY = ''
 # "158528".
 COURSE_ID = ''
 
-# Map of students.Student attributes to canvasapi.Usert attributes.
+# Map of students.Student attributes to canvasapi.User attributes.
 KEY_MAP = {
     'student_number': 'integration_id',
     'utorid': 'sis_user_id'
 }
 
 # Default format in which to write a classlist file. Here id1 is Quercus id.
-CLASSLIST_FORMAT = ('last', 'first', 'utorid',
-                    'student_number', 'id1', 'email')
+CLASSLIST_FORMAT = ('last', 'first', 'utorid', 'student_number',
+                    'id1', 'email', 'lecture')
 
 
 def download_students(course, key='student_number'):
@@ -63,6 +63,26 @@ def _download_role(course, role, key='student_number'):
 
 
 def _canvas_user_to_student(user):
+
+    lecture = tutorial = None
+
+    if len(user.enrollments) == 1:
+        lecture = (user.enrollments[0]['sis_section_id'].split('-')[2]
+                   if user.enrollments[0]['sis_section_id'] is not None
+                   else None)
+    if len(user.enrollments) > 1:
+        first = (user.enrollments[0]['sis_section_id'].split('-')[2]
+                 if user.enrollments[0]['sis_section_id'] is not None
+                 else None)
+        second = (user.enrollments[1]['sis_section_id'].split('-')[2]
+                  if user.enrollments[1]['sis_section_id'] is not None
+                  else None)
+
+        if first.lower().startswith('l'):
+            lecture, tutorial = first, second
+        else:
+            lecture, tutorial = second, first
+
     return sts.Student(
         utorid=getattr(user, KEY_MAP['utorid']),
         student_number=getattr(user, KEY_MAP['student_number']),
@@ -70,7 +90,9 @@ def _canvas_user_to_student(user):
         first=' '.join(user.name.split()[:-1]),
         email=getattr(user, 'email', 'fake@utoronto.ca').replace(
             'noemail', 'mail'),  # TODO: HACK. WTF is going on with emails on Quercus?
-        id1=str(user.id))  # this is Quercus ID
+        id1=str(user.id),  # this is Quercus ID
+        lecture=lecture,
+        tutorial=tutorial)
 
 
 def download_asst_grades(course, asst_name, key='student_number'):
@@ -116,7 +138,37 @@ def upload_new_asst_grades(course, attribute_to_grade,
 
     grade_data = {_get_user_id(course, attr): {'posted_grade': grade}
                   for (attr, grade) in attribute_to_grade.items()}
+    assignment.submissions_bulk_update(grade_data=grade_data)
 
+
+def upload_new_asst_grades_by_quercus_id(course, quercus_to_grade,
+                                         assignment_name='Assignment',
+                                         out_of=None,
+                                         assignment_group_id=None):
+    """Upload new assignment grades to quercus.
+    If you already know the Quercus IDs this is much faster to upload.
+
+
+    course is a canvasapi.Course.
+    assignment_name is the name of the new canvasapi.Assignment.
+    quercus_to_grade is a Dict[quercus_id, grade:float] where quercus_id
+      is the Quercus ID.
+    out_of is maximum number of marks on this assignment.
+
+    """
+
+    specs = {
+        'name': assignment_name,
+        'assignment_group_id': assignment_group_id,
+        'points_possible': out_of,
+        'hide_results': 'always',
+        'published': True  # can't bulk_apdate if not published!
+    }
+
+    assignment = course.create_assignment(specs)
+
+    grade_data = {quercus_id: {'posted_grade': grade}
+                  for (quercus_id, grade) in quercus_to_grade.items()}
     assignment.submissions_bulk_update(grade_data=grade_data)
 
 
@@ -136,7 +188,8 @@ def upload_gradebook(course, gradebook, attr='student_number'):
 
     course is a canvasapi.Course.
     gradebook is a gradebook.GradeBook.
-    attr is Student attribute to use as keys (e.g., 'utorid' or 'student_number').
+    attr is Student attribute to use as keys
+           (e.g., 'utorid' or 'student_number').
     """
 
     assert gradebook.outofs is not None
@@ -146,38 +199,47 @@ def upload_gradebook(course, gradebook, attr='student_number'):
         upload_new_asst_grades(course, attr_to_grade, asst_name, outof)
 
 
-def write_classlist(course, path_prefix, classlist_format=CLASSLIST_FORMAT):
+def write_classlist(course, path_prefix,
+                    classlist_format=CLASSLIST_FORMAT, header=False) -> str:
     """Download current student data from Quercus and write today's
     classlist to file path_prefix/classlist_month_day.csv.
+
+    Return the name of the newly written classlist file.
 
     course is a canvasapi.Course
 
     """
 
-    _write_roster_file(course, 'student', path_prefix, classlist_format)
+    return _write_roster_file(course, 'student', path_prefix,
+                              classlist_format, header)
 
 
 def write_ta_list(course, path_prefix, list_format=CLASSLIST_FORMAT):
     """Download current TA data from Quercus and write today's
     TA list to file path_prefix/classlist_month_day.csv.
 
+    Return the name of the newly written file.
+
     course is a canvasapi.Course
 
     """
 
-    _write_roster_file(course, 'ta', path_prefix, list_format)
+    return _write_roster_file(course, 'ta', path_prefix, list_format)
 
 
-def _write_roster_file(course, role, path_prefix, list_format=CLASSLIST_FORMAT):
+def _write_roster_file(course, role, path_prefix,
+                       list_format=CLASSLIST_FORMAT, header=False):
 
+    filename = '{}list_{}_{}.csv'.format(
+        'TA' if role.lower() == 'ta' else 'class',
+        date.today().month,
+        date.today().day)
     users = _download_role(course, role)
-    with open(os.path.join(path_prefix,
-                           '{}list_{}_{}.csv'.format(
-                               'TA' if role.lower() == 'ta' else 'class',
-                               date.today().month,
-                               date.today().day)),
-              'w') as outfile:
+    with open(os.path.join(path_prefix, filename), 'w') as outfile:
+        if header:
+            outfile.write(','.join(list_format) + '\n')
         users.write_classlist(outfile, list_format)
+    return filename
 
 
 def write_breakout_rooms(course, num_students_per_room, path_prefix='.'):
@@ -193,10 +255,11 @@ def write_breakout_rooms(course, num_students_per_room, path_prefix='.'):
     sections = course.get_sections(include=['students'])
 
     for section in sections:
-        filename = os.path.join(path_prefix,
-                                '{}_{}_{}.csv'.format(date.today().month,
-                                                      date.today().day,
-                                                      section.name.split('-')[2]))
+        filename = os.path.join(
+            path_prefix,
+            '{}_{}_{}.csv'.format(date.today().month,
+                                  date.today().day,
+                                  section.name.split('-')[2]))
         num_rooms = len(section.students) // num_students_per_room
         emails = [course.get_user(student['id'], include=['email']).email
                   for student in section.students]
@@ -225,8 +288,9 @@ def _get_userid_by_utorid(course, utorid):
 
 
 def _get_user_id(course, attribute):
-    result = list(filter(lambda user: attribute in (user.login_id, user.integration_id),
-                         course.get_users()))
+    result = list(filter(
+        lambda user: attribute in (user.login_id, user.integration_id),
+        course.get_users()))
     assert len(result) == 1
     return result[0].id
 
@@ -240,7 +304,8 @@ def _get_students(course):
 
 
 def _get_role(course, role):
-    return list(course.get_users(enrollment_type=[role], include=['email']))
+    return list(course.get_users(enrollment_type=[role],
+                                 include=['email', 'enrollments']))
 
 
 def _get_assignment(course, name):

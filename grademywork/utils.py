@@ -44,6 +44,7 @@ def get_grades(session, user, assessment_name):
     return {get_team(sheet): get_grade(sheet, points_questions)
             for sheet in sheets}
 
+
 def get_team(sheet):
     """Return team_num for sheet."""
 
@@ -67,7 +68,8 @@ def get_points_questions(assessment):
 
     return [question['id']
             for rubric in assessment['rubrics']
-            for question in rubric['questions'] if question['type'] == 'Points']
+            for question in rubric['questions']
+            if question['type'] == 'Points']
 
 
 def start_session(email, password):
@@ -75,8 +77,9 @@ def start_session(email, password):
     """
 
     session = requests.Session()
-    user = session.post('{}login'.format(API), json=({'email': email,
-                                                      'password': password})).json()
+    user = session.post('{}login'.format(API),
+                        json=({'email': email,
+                               'password': password})).json()
     return (session, user)
 
 
