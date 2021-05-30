@@ -36,7 +36,9 @@ class Students:
 
     @staticmethod
     def load_intranet_classlist(infile, dict_key='student_number'):
-        '''Return a new Students created from an Intranet classlist csv file.'''
+        '''Return a new Students created from an Intranet classlist csv file.
+
+        '''
 
         reader = csv.DictReader(infile)
         students = Students(None, dict_key)
@@ -66,17 +68,6 @@ class Students:
             student = Student(**dict(zip(attrs, row)))
             students.add_student(student)
         return students
-
-    # def update(self, updatefrom):
-    #     """Update all student information with information form
-    #     updatefrom. Every non-None Student field in updatefrom will
-    #     overwrite the correspiding field in this Students. Useful to
-    #     update email addresses which are all avaiable on Intranet but
-    #     some missing on Quercus.
-
-    #     """
-
-    #     pass
 
     def _update_emails(self, updatefrom):
         """Only here to address the Quercus no-emails bug.
@@ -186,14 +177,15 @@ class Students:
             if attr is not None:
                 attr2student[attr] = student
             else:
-                print('WARNING: This student\'s attribute {} is None!\n\t{}'.format(
+                print('WARNING: Student\'s attribute {} is None!\n\t{}'.format(
                     attribute, student))
         return attr2student
 
     def to_json(self):
         '''Return a JSON for these Students.'''
 
-        return '{{ {} }}'.format(','.join([student.to_json() for student in self.students]))
+        return '{{ {} }}'.format(','.join([student.to_json()
+                                           for student in self.students]))
 
     def full_str(self, ordering=DEFAULT_STUDENT_STR, key=default_student_sort):
         '''Return a customized str representation of these Students.
@@ -267,7 +259,8 @@ class Student:
         return self.full_str(DEFAULT_STUDENT_STR)
 
     def __eq__(self, other):
-        result = any(getattr(self, attr) and (getattr(self, attr) == getattr(other, attr))
+        result = any(getattr(self, attr) and
+                     (getattr(self, attr) == getattr(other, attr))
                      for attr in EQ_STUDENTS)
         return result
 
@@ -302,7 +295,8 @@ class Student:
         else:
             utorid = None
 
-        return Student(student_number=stunum, first=first, last=last, utorid=utorid)
+        return Student(student_number=stunum, first=first, last=last,
+                       utorid=utorid)
 
 
 class InvalidStudentInfoError(Exception):

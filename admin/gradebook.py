@@ -17,14 +17,15 @@ class GradeBook:
     """My own gradebook."""
 
     def __init__(self, studentgrades=None, dict_key='student_number',
-                 outofs=None, comments=None):
+                 outofs=None, comments=None, sanity_check=True):
         """Init a Gradesfile given:
 
         outofs: Dict[str, float] maps assigment name to max possible grade.
-        studentgrades: Dict[dict_key, Tuple(Student, Grades)].
         dict_key: a Student attribute; key into studentgrades and comments.
            Most likely student_number or utorid.
+        studentgrades: Dict[dict_key, Tuple(Student, Grades)].
         comments: Dict[dict_key, str].
+        sanity_check: check created GradeBook for inconsistencies or errors?
 
         """
 
@@ -32,8 +33,8 @@ class GradeBook:
         self.studentgrades = dict(studentgrades) if studentgrades else {}
         self.dict_key = dict_key
         self.comments = dict(comments) if comments else {}
-        _validate(self.studentgrades, self.dict_key,
-                  self.outofs, self.comments)
+        if sanity_check:
+            self.sanity_check()
 
     def sanity_check(self):
         """Check validity of this GradeBook."""
@@ -104,14 +105,17 @@ class GradeBook:
         return Students(record[0] for record in self.studentgrades.values())
 
     def get_student_grades_by_utorid(self, utorid):
-        """Return Grades of a Student with utorid. Raise NoSuch? if no such Student."""
+        """Return Grades of a Student with utorid. Raise NoSuch? if no such
+        Student."""
 
         return self.get_student_grades_by_attribute('utorid', utorid)
 
     def get_student_grades_by_student_number(self, student_number):
-        """Return Grades of a Student with student_number. Raise NoSuch? if no such Student."""
+        """Return Grades of a Student with student_number. Raise NoSuch? if no
+        such Student."""
 
-        return self.get_student_grades_by_attribute('student_number', student_number)
+        return self.get_student_grades_by_attribute('student_number',
+                                                    student_number)
 
     def get_student_grades_by_attribute(self, attribute, attr_value):
         """Return Grades of a Student with value of attribute equal to
@@ -129,8 +133,11 @@ class GradeBook:
 
     def get_dict(self, key):
         """Return a Dict[key, Tuple(Student, Grades).
-        Useful when self.key = 'student_number' and we want the dict by 'utorid',
-        for example."""
+
+        Useful when self.key = 'student_number' and we want the dict
+        by 'utorid', for example.
+
+        """
 
         if key == self.dict_key:
             return self.studentgrades
@@ -141,8 +148,9 @@ class GradeBook:
                 key = getattr(student, key)
                 new_key_to_student_grades[key] = (student, grades)
             except AttributeError:
-                print('WARNING: This student does not have attribute {}:\n\t{}'.format(
-                    key, student))
+                print('WARNING: '
+                      'Student does not have attribute {}:\n\t{}'.format(
+                          key, student))
         return new_key_to_student_grades
 
     @staticmethod
@@ -170,7 +178,8 @@ class GradeBook:
             grades = Grades.make_grades_from_gf_line(line, assts)
             stnum_to_student_grades[student.student_number] = (student, grades)
 
-        gradebook = GradeBook(stnum_to_student_grades, 'student_number', outofs,
+        gradebook = GradeBook(stnum_to_student_grades,
+                              'student_number', outofs,
                               stnum_to_comment)
 
         gradebook.to_key(dict_key)
@@ -190,8 +199,9 @@ class GradeBook:
             try:
                 new_key = getattr(student, key)
             except AttributeError:
-                print('WARNING: This student does not have attribute {}:\n\t{}'.format(
-                    key, student))
+                print('WARNING: '
+                      'Student does not have attribute {}:\n\t{}'.format(
+                          key, student))
                 continue
             dict_key_to_student_grades[new_key] = (student, grades)
             if old_key in self.comments:
@@ -200,12 +210,15 @@ class GradeBook:
         self.comments = dict_key_to_comments
         self.dict_key = key
 
-    def write_gf(self, outfile, assts=None, utorid=True, key=default_student_sort):
+    def write_gf(self, outfile, assts=None, utorid=True,
+                 key=default_student_sort):
         """Write a gf file to outfile.
 
-        assts is an iterable of asst names: the order in which they will appear in the gf.
-          If assts is None, the order will be alphabetical and all grades will be included.
-        utorid: Include a field for utorid?
+        assts is an iterable of asst names: the order in which they
+        will appear in the gf.  If assts is None, the order will be
+        alphabetical and all grades will be included.  utorid: Include
+        a field for utorid?
+
         """
 
         outofs = _sort_outofs(self.outofs, assts)
@@ -235,15 +248,19 @@ class GradeBook:
                               key=default_student_sort, names=None):
         """Write a csv grades file to outfile.
 
-        student_attrs is an iterable of Student attributes to be included in the file, in
-           the order in which they will appear.
-        assts is an iterable of asst names: the order in which they will appear in the gf.
-          If assts is None, the order will be alphabetical and all grades will be included.
+        student_attrs is an iterable of Student attributes to be
+           included in the file, in the order in which they will
+           appear.
+        assts is an iterable of asst names: the order in which they
+          will appear in the gf.  If assts is None, the order will be
+          alphabetical and all grades will be included.
         comments: include comments as a last column?
-        names is Dict[asst-or-attr, new-name] specifies how the header is created, in case
-           we want it to be different from just the names of Student attributes and assignment
-           names as stored. One of the keys can be 'comments' to replace the word 'comments'
-           in the header.
+        names is Dict[asst-or-attr, new-name] specifies how the header
+           is created, in case we want it to be different from just
+           the names of Student attributes and assignment names as
+           stored. One of the keys can be 'comments' to replace the
+           word 'comments' in the header.
+
         """
 
         if student_attrs is None:
@@ -259,10 +276,12 @@ class GradeBook:
         for student, grades in student_grades_list:
             student_grades = ''.join(
                 [',{}'.format(grades.get_grade(asst)) for asst in assts])
-            student_comment = (',{}'.format(self.comments.get(getattr(student, self.dict_key), ''))
-                               if comments else '')
+            student_comment = (',{}'.format(self.comments.get(
+                getattr(student, self.dict_key), '')) if comments else '')
             outfile.write('{}{}{}\n'.format(
-                student.full_str(student_attrs), student_grades, student_comment))
+                student.full_str(student_attrs),
+                student_grades,
+                student_comment))
 
     def write_csv_submit_file(self, outfile, asst='all',
                               exam_no_shows=None, attribute='student_number'):
@@ -280,8 +299,9 @@ class GradeBook:
             try:
                 grade = grades.get_grade(asst)
             except KeyError:
-                print('WARNING: No grade for assignment {} for this student:\n\t{}'.format(
-                    asst, student))
+                print('WARNING: '
+                      'No grade for assignment {} for student:\n\t{}'.format(
+                          asst, student))
                 continue
 
             no_show = getattr(student, attribute) in exam_no_shows
@@ -473,6 +493,7 @@ def _validate(student_grades, dict_key, outofs, comments):
 
 
 def grades_equal(grade1, grade2):
-    """Return whether grade1 and grade2 are the same grade, with 0.1 precision."""
+    """Return whether grade1 and grade2 are the same grade, with 0.1
+    precision."""
 
     return round(grade1, 1) == round(grade2, 1)

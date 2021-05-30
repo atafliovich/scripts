@@ -17,5 +17,6 @@ def default_student_sort(student):
 
     return student.last + student.first
 
+
 # TODO Fix this
 DEFAULT_FORMULA_OUTOF = 100
