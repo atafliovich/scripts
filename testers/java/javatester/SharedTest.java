@@ -1,3 +1,5 @@
+package javatester;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -7,6 +9,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -26,22 +29,42 @@ public class SharedTest {
         Modifier.isAbstract(method.getModifiers()));
   }
 
+  public static void shouldBeDefault(Method method) {
+    assertTrue(String.format("%s should be a default method", method.getName()),
+        method.isDefault());
+  }
+
   public static void shouldBeInterface(Class<?> cls) {
     assertTrue(String.format("%s should be an interface", cls.getName()), cls.isInterface());
   }
-  
+
+  public static void shouldNotBeInterface(Class<?> cls) {
+    assertFalse(String.format("%s should not be an interface", cls.getName()), cls.isInterface());
+  }
+
   public static void shouldBeGeneric(Class<?> cls) {
     assertTrue(String.format("%s should be generic", cls.getName()),
         cls.getTypeParameters().length > 0);
   }
-  
+
+  public static void shouldNotBeGeneric(Class<?> cls) {
+    assertEquals(String.format("%s should be generic", cls.getName()),
+        cls.getTypeParameters().length, 0);
+  }
+
+  public static void shouldHaveTypeParameter(Class<?> cls, Class<?> param) {
+    TypeVariable<?>[] tvs = cls.getTypeParameters();
+    assertTrue(String.format("%s should have %s as type parameter", cls.getName(), param.getName()),
+        Arrays.asList(tvs).stream().anyMatch(t -> t.getClass().equals(param.getClass())));
+  }
+
   public static TypeVariable<?>[] shouldHaveNTypeParameters(Class<?> cls, int n) {
     TypeVariable<?>[] tvs = cls.getTypeParameters();
     assertEquals(String.format("%s should have %d type parameters", cls.getName(), n),
         tvs.length, n);
     return tvs;
   }
-  
+
   public static void shouldContainBooleanField(Class<?> cls) {
     shouldContainFieldEither(cls, Boolean.class, boolean.class);
   }
@@ -63,6 +86,13 @@ public class SharedTest {
     assertTrue(msg, present);
   }
 
+  public static void onlyPrivateFields(Class<?> cls) {
+    boolean allPrivate = Arrays.asList(cls.getDeclaredFields()).stream()
+        .allMatch(fld -> Modifier.isPrivate(fld.getModifiers()));
+    String msg = String.format("%s should have only private fields", cls.getName());
+    assertTrue(msg, allPrivate);
+  }
+
   private static void shouldContainFieldEither(Class<?> cls, Class<?> either, Class<?> or) {
     boolean present = Arrays.asList(cls.getDeclaredFields()).stream()
         .anyMatch(fld -> fld.getType().equals(either) || fld.getType().equals(or));
@@ -77,6 +107,12 @@ public class SharedTest {
     return fields;
   }
 
+  public static Field[] shouldContainAtLeastNFields(Class<?> cls, int n) {
+    Field[] fields = cls.getDeclaredFields();
+    assertTrue(String.format("%s should have %d field(s)", cls.getName(), n), fields.length >= n);
+    return fields;
+  }
+
   // ** Implementing methods (excludes inherited) ***/
   public static Method[] shouldDeclareNMethods(Class<?> cls, int n) {
     Method[] methods = cls.getDeclaredMethods();
@@ -85,9 +121,25 @@ public class SharedTest {
     return methods;
   }
 
-  public static void shouldExtend(Class<?> cls, Class<?> parent) {
+  public static Method[] shouldDeclareAtLeastNMethods(Class<?> cls, int n) {
+    Method[] methods = cls.getDeclaredMethods();
+    assertTrue(String.format("%s should declare %d methods.", cls.getName(), n),
+        methods.length >= n);
+    return methods;
+  }
+
+  public static Type shouldExtend(Class<?> cls, Class<?> parent) {
+    Type parentType = cls.getSuperclass();
     assertTrue(String.format("%s should extend %s", cls.getName(), parent.getName()),
-        cls.getSuperclass().equals(parent));
+        parentType.equals(parent));
+    return parentType;
+  }
+
+  public static Type shouldExtendGeneric(Class<?> cls, Class<?> parent) {
+    Type parentType = cls.getGenericSuperclass();
+    assertTrue(String.format("%s should extend %s", cls.getName(), parent.getName()),
+        parentType.getTypeName().contains(parent.getName()));
+    return parentType;
   }
 
   /**
@@ -216,6 +268,11 @@ public class SharedTest {
   public static void shouldImplementInterface(Class<?> cls, Class<?> inter) {
     assertTrue(String.format("%s should implement interface %s", cls.getName(), inter.getName()),
         Arrays.asList(cls.getInterfaces()).contains(inter));
+  }
+
+  public static void shouldImplementGenericInterface(Class<?> cls, Class<?> inter) {
+    assertTrue(String.format("%s should implement interface %s", cls.getName(), inter.getName()),
+        Arrays.asList(cls.getGenericInterfaces()).contains(inter));
   }
 
   /**
