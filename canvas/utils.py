@@ -200,7 +200,8 @@ def upload_gradebook(course, gradebook, attr='student_number'):
 
 
 def write_classlist(course, path_prefix,
-                    classlist_format=CLASSLIST_FORMAT, header=False) -> str:
+                    classlist_format=CLASSLIST_FORMAT, header=False,
+                    target_group='student') -> str:
     """Download current student data from Quercus and write today's
     classlist to file path_prefix/classlist_month_day.csv.
 
@@ -210,7 +211,7 @@ def write_classlist(course, path_prefix,
 
     """
 
-    return _write_roster_file(course, 'student', path_prefix,
+    return _write_roster_file(course, target_group, path_prefix,
                               classlist_format, header)
 
 
@@ -235,7 +236,8 @@ def _write_roster_file(course, role, path_prefix,
         date.today().month,
         date.today().day)
     users = _download_role(course, role)
-    with open(os.path.join(path_prefix, filename), 'w') as outfile:
+    with open(os.path.join(path_prefix, filename), 'w',
+              encoding='utf-8') as outfile:
         if header:
             outfile.write(','.join(list_format) + '\n')
         users.write_classlist(outfile, list_format)
@@ -255,11 +257,10 @@ def write_breakout_rooms(course, num_students_per_room, path_prefix='.'):
     sections = course.get_sections(include=['students'])
 
     for section in sections:
+        sec = section.name.split('-')[2]
         filename = os.path.join(
             path_prefix,
-            '{}_{}_{}.csv'.format(date.today().month,
-                                  date.today().day,
-                                  section.name.split('-')[2]))
+            f'{date.today().month}_{date.today().day}_{sec}.csv')
         num_rooms = len(section.students) // num_students_per_room
         emails = [course.get_user(student['id'], include=['email']).email
                   for student in section.students]
@@ -273,10 +274,10 @@ def _write_breakout_rooms_one_section(emails, num_rooms, filename):
     """
 
     random.shuffle(emails)
-    with open(filename, 'w') as outfile:
+    with open(filename, 'w', encoding='utf-8') as outfile:
         outfile.write('Pre-assign Room Name,Email Address\n')
         for i, email in enumerate(emails):
-            outfile.write('room{},{}\n'.format(i % num_rooms, email))
+            outfile.write(f'room{i % num_rooms},{email}\n')
 
 
 def _get_user_by_utorid(course, utorid):
