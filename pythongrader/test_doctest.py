@@ -3,6 +3,7 @@ own tester.
 
 """
 
+import warnings
 import unittest
 import doctest
 import timeout_decorator
@@ -17,15 +18,17 @@ FAILURE_MESSAGE = '''
 Some docstring examples from function {} failed doctest.
 '''
 
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 
 class TestDoctestBase(unittest.TestCase):
     """Base class for doctest testers."""
 
     def exists_test(self, fname, module):
-        '''Check that there is a function named fname with a docstring. If
+        """Check that there is a function named fname with a docstring. If
         check succeeds, return (function, __doc__).
 
-        '''
+        """
 
         msg = EXISTS_FAILURE_MESSAGE.format(fname)
 
@@ -43,13 +46,12 @@ class TestDoctestBase(unittest.TestCase):
 
     @timeout_decorator.timeout(TIMEOUT)
     def doctests_pass(self, fname, module):
-        '''Check that all doctests in f pass.
-        '''
+        """Check that all doctests in f pass."""
 
         _, doc = self.exists_test(fname, module)
 
         doc_test = doctest.DocTestParser().get_doctest(
-            doc, module.__dict__, 'doctests_{}'.format(fname),
+            doc, module.__dict__, f'doctests_{fname}',
             module.__name__, None)
         runner = doctest.DocTestRunner()
         runner.run(doc_test)
@@ -66,7 +68,7 @@ def auto_make_test_from_functions(unittest_object, function_names, module):
     """
 
     for fname in function_names:
-        test_name = 'test_doctests_pass_{}'.format(fname)
+        test_name = f'test_doctests_pass_{fname}'
         test = TestDoctestBase.doctests_pass
 
         def new_test(self, fname=fname, test=test, module=module):
