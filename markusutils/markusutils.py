@@ -102,7 +102,7 @@ def _get_one_file(api, course_id, assignment_id, group_id, utorid,
 
 def upload_result_files(api: markusapi.Markus, course_id: int,
                         assignment_id: int, local_dir: str,
-                        result_file_name: str):
+                        result_file_name: str, utorids: list[str] = None):
     """Upload local_dir/utorid/result_file_name into each student repo on
     MarkUs.
 
@@ -113,8 +113,9 @@ def upload_result_files(api: markusapi.Markus, course_id: int,
     for group in groups:
         group_id, utorid = group['id'], group['group_name']
 
-        upload_result_file(api, course_id, assignment_id, local_dir,
-                           result_file_name, utorid, group_id)
+        if utorids is None or utorid in utorids:
+            upload_result_file(api, course_id, assignment_id, local_dir,
+                               result_file_name, utorid, group_id)
 
 
 def upload_result_file(api: markusapi.Markus, course_id: int,
@@ -136,13 +137,13 @@ def upload_result_file(api: markusapi.Markus, course_id: int,
 
     result_file_path = os.path.join(local_dir, utorid, result_file_name)
     try:
-        with open(result_file_path) as result_file:
+        with open(result_file_path, encoding='utf-8') as result_file:
             contents = result_file.read()
     except FileNotFoundError:
         print(f'Warning: no result file for {utorid}.')
         return
 
-    response = api.upload_file_to_repo(assignment_id, course_id,
+    response = api.upload_file_to_repo(course_id, assignment_id,
                                        group_id, result_file_name,
                                        contents)
     # 201 is success
@@ -216,11 +217,11 @@ def upload_grade(api: markusapi.Markus,
                              criteria.values()}
 
     # HACK: undo complete state
-    api.update_marking_state(assignment_id, course_id, group_id,
+    api.update_marking_state(course_id, assignment_id, group_id,
                              'incomplete')
 
     response = api.update_marks_single_group(
-        criteria_mark_map, course_id, assignment_id, group_id)
+        course_id, criteria_mark_map, assignment_id, group_id)
 
     # 200 is success
     if response.get('status', 0) == 500 or response.get('code', 0) != '200':
