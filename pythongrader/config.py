@@ -1,5 +1,4 @@
-""" Constants, etc. used by the grader.
-"""
+"""Constants, etc. used by the grader."""
 
 TIMEOUT = 5
 

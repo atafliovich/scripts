@@ -5,7 +5,6 @@ instead of using specified constants) in their solutions.
 
 import operator
 import sys
-from typing import Callable, Dict, Tuple
 
 from .messages import (COMPARE_MESSAGE_CONSTANTS,
                        ERROR_MESSAGE_CONSTANTS,
@@ -20,9 +19,9 @@ class TestConstantsBase(TestBase):
     """
 
     def _check_use_of_constants(
-            self, func: Callable, args: list, expected: object,
-            _constant_to_value: Dict[str, object], modulename: str,
-            comparator: callable = operator.eq) -> Tuple[bool, str]:
+            self, func: callable, args: list, expected: object,
+            _constant_to_value: dict[str, object], modulename: str,
+            comparator: callable = operator.eq) -> tuple[bool, str]:
         """Set values of constants in the student module according to
         _constant_to_value. Then check if func(args) returns R such
         that comparator(expected, R) is True.
@@ -58,7 +57,8 @@ class TestConstantsBase(TestBase):
         return (False, _make_failure_constants_msg(
             func, args, expected, returned, _constant_to_value))
 
-    def _set_constants(self, _constant_to_value: Dict[str, object], modulename: str) -> None:
+    def _set_constants(self, _constant_to_value: dict[str, object],
+                       modulename: str) -> None:
         """Set the values of constants in the student module according to
         _constant_to_value.
 
@@ -73,7 +73,7 @@ class TestConstantsBase(TestBase):
 
 
 def _make_error_constants_msg(func: callable, args: list,
-                              _constant_to_value: Dict[str, object],
+                              _constant_to_value: dict[str, object],
                               error: Exception) -> str:
     """Return an error message about the use of constants: func(args)
     raised an error after setting constants to values in
@@ -88,7 +88,7 @@ def _make_error_constants_msg(func: callable, args: list,
 
 def _make_failure_constants_msg(func: callable, args: list,
                                 expected: object, actual: object,
-                                _constant_to_value: Dict[str, object]):
+                                _constant_to_value: dict[str, object]):
     """Return a failure message about the use of constants: after setting
     constants according to _constant_to_value, func(args) returned
     actual instead of expected,
@@ -103,7 +103,7 @@ def _make_failure_constants_msg(func: callable, args: list,
 
 def _make_compare_constants_msg(func: callable, args: list,
                                 expected: object,
-                                _constant_to_value: Dict[str, object],
+                                _constant_to_value: dict[str, object],
                                 error: Exception) -> str:
     """Return a comparison error messagea about the use of constants:
     after setting constants according to _constant_to_value, comparing
@@ -115,9 +115,10 @@ def _make_compare_constants_msg(func: callable, args: list,
         expected, error)
 
 
-def _make_constants_and_values_msg(_constant_to_value: Dict[str, object]) -> str:
+def _make_constants_and_values_msg(
+        _constant_to_value: dict[str, object]) -> str:
     """Return a string const1 = val1\nconst2 = value2 ... from
     _constant_to_value.  """
 
-    return '\n'.join(['{} = {}'.format(key, value)
+    return '\n'.join([f'{key} = {value}'
                       for (key, value) in _constant_to_value.items()])

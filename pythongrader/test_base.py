@@ -7,12 +7,12 @@ import copy
 import importlib
 import operator
 import sys
-from typing import Callable, Dict, Tuple
 import unittest
 
 from .messages import (COMPARE_MESSAGE, FAILURE_MESSAGE,
                        FAILURE_MESSAGE_MUTATION, ERROR_MESSAGE,
-                       FAILURE_MESSAGE_NO_MUTATION)
+                       FAILURE_MESSAGE_NO_MUTATION,
+                       FAILURE_MESSAGE_NO_MUTATION_INDEX)
 
 
 class TestBase(unittest.TestCase):
@@ -27,8 +27,8 @@ class TestBase(unittest.TestCase):
 
     # Most likely you can use this method as is. If not, look at
     # helpers below to override.
-    def _check(self, func: Callable, args: list, expected: object,
-               comparator: Callable = operator.eq) -> Tuple[bool, str]:
+    def _check(self, func: callable, args: list, expected: object,
+               comparator: callable = operator.eq) -> tuple[bool, str]:
         """Check if func(args) returns a result R such that
         comparator(expected, R) is True.
 
@@ -58,9 +58,9 @@ class TestBase(unittest.TestCase):
 
     # Most likely you can use this method as is. If not, look at
     # helpers below to override.
-    def _check_mutated(self, func: Callable, args: list, mutated_index: int,
+    def _check_mutated(self, func: callable, args: list, mutated_index: int,
                        expected: object,
-                       comparator: Callable = operator.eq) -> Tuple[bool, str]:
+                       comparator: callable = operator.eq) -> tuple[bool, str]:
         """Check if function func, when called with arguments args, mutates
         the argument at index mutated_index in args, such that after
         the call the value of this argument is arg such that
@@ -94,8 +94,9 @@ class TestBase(unittest.TestCase):
 
     # Most likely you can use this method as is. If not, look at
     # helpers below to override.
-    def _check_not_mutated(self, func: Callable, args: list,
-                           comparator: Callable = operator.eq) -> Tuple[bool, str]:
+    def _check_not_mutated(
+            self, func: callable, args: list,
+            comparator: callable = operator.eq) -> tuple[bool, str]:
         """Check that function func, when called with arguments args, does
         not mutate the arguments. If args_mut are the args after the call,
         comparator(args, args_mut) must be True.
@@ -124,9 +125,47 @@ class TestBase(unittest.TestCase):
 
         return (False, _make_failure_no_mutation_msg(func, args, args_mut))
 
+    # Most likely you can use this method as is. If not, look at
+    # helpers below to override.
+    def _check_not_mutated_indices(
+            self, func: callable, args: list, indices: list[int],
+            comparator: callable = operator.eq) -> tuple[bool, str]:
+        """Check that function func, when called with arguments args, does not
+        mutate the arguments at indices indices. If args_mut are the
+        args after the call, comparator(arg, arg_mut) must be True for
+        each arg.
+
+        Return (True, '') if the check succeeds.
+        Return (False, error-or-failure-message) if anything goes wrong.
+
+        The default comparator is the function that corresponds to
+        operator ==.
+
+        """
+
+        args_mut = copy.deepcopy(args)
+        try:
+            func(*args_mut)
+        except Exception as exn:
+            return (False, _make_error_msg(func, args, exn))
+
+        for index in indices:
+            try:
+                was, became = args[index], args_mut[index]
+                print(was)
+                print(became)
+                if not comparator(was, became):
+                    return (False, _make_failure_no_mutation_index_msg(
+                        func, args, index, became))
+            except Exception as exn:
+                return (False, _make_compare_msg(func, was, became, exn))
+
+        return (True, '')
+
     # override if needed
-    def _check_no_mocks(self, func: Callable, args: list, expected: object,
-                        comparator: Callable = operator.eq) -> Tuple[bool, str]:
+    def _check_no_mocks(
+            self, func: callable, args: list, expected: object,
+            comparator: callable = operator.eq) -> tuple[bool, str]:
         """Check if func(args) returns a result R such that comparator(R,
         expected) is True.
 
@@ -141,9 +180,10 @@ class TestBase(unittest.TestCase):
         return self._check(func, args, expected, comparator)
 
     # override if needed
-    def _check_with_mocks(self, func: Callable, args: list, expected: object,
-                          _mock_specs: Dict[str, Callable],
-                          comparator: Callable = operator.eq) -> Tuple[bool, str]:
+    def _check_with_mocks(
+            self, func: callable, args: list, expected: object,
+            _mock_specs: dict[str, callable],
+            comparator: callable = operator.eq) -> tuple[bool, str]:
         """Mock functions in the student module according to _mock_specs. Then
         check if func(args) returns R such that comparator(R,
         expected) is True.
@@ -162,9 +202,10 @@ class TestBase(unittest.TestCase):
         self._mock(_mock_specs)
         return self._check(func, args, expected, comparator)
 
-    def _check_no_mocks_mutation(self, func: Callable, args: list,
-                                 mutated_index: int, expected: object,
-                                 comparator: Callable = operator.eq) -> Tuple[bool, str]:
+    def _check_no_mocks_mutation(
+            self, func: callable, args: list,
+            mutated_index: int, expected: object,
+            comparator: callable = operator.eq) -> tuple[bool, str]:
         """Check if func(args) mutates the argument at index mutated_index in
         args, such that after the call the value of this argument is
         arg such that comparator(expected, arg) is True.
@@ -181,10 +222,11 @@ class TestBase(unittest.TestCase):
                                    expected, comparator)
 
     # override if needed
-    def _check_with_mocks_mutation(self, func: Callable, args: list,
-                                   mutated_index: int, expected: object,
-                                   _mock_specs: Dict[str, Callable],
-                                   comparator: Callable = operator.eq) -> Tuple[bool, str]:
+    def _check_with_mocks_mutation(
+            self, func: callable, args: list,
+            mutated_index: int, expected: object,
+            _mock_specs: dict[str, callable],
+            comparator: callable = operator.eq) -> tuple[bool, str]:
         """Mock functions in the student module according to _mock_specs.
         Then check if function func(args) mutates the argument at
         index mutated_index in args, such that after the call the
@@ -206,7 +248,7 @@ class TestBase(unittest.TestCase):
         return self._check_mutated(func, args, mutated_index,
                                    expected, comparator)
 
-    def _mock(self, fnames_to_mocks: Dict[str, Callable]):
+    def _mock(self, fnames_to_mocks: dict[str, callable]):
         """Mock each function in fnames_to_mocks with its corresponding mock
         function in the student module.
 
@@ -241,7 +283,8 @@ def _make_failure_mutation_msg(func: callable, args: list, mutated_index: int,
                                            mutated_index, expected, actual)
 
 
-def _make_failure_no_mutation_msg(func: callable, args: list, args_mut: list) -> str:
+def _make_failure_no_mutation_msg(
+        func: callable, args: list, args_mut: list) -> str:
     """Return a failure message: func(args) should not mutate, new values
     are args_mut.
 
@@ -249,6 +292,14 @@ def _make_failure_no_mutation_msg(func: callable, args: list, args_mut: list) ->
 
     return FAILURE_MESSAGE_NO_MUTATION.format(_make_call_string(func, args),
                                               args_mut)
+
+
+def _make_failure_no_mutation_index_msg(
+        func: callable, args: list, index: int, arg_mut: object) -> str:
+    """Return a failure message: func(args) mutated arg at index."""
+
+    return FAILURE_MESSAGE_NO_MUTATION_INDEX.format(
+        _make_call_string(func, args), index, arg_mut)
 
 
 def _make_error_msg(func: callable, args: list,

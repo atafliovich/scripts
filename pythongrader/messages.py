@@ -19,6 +19,11 @@ The call {} should not modify its arguments.
 The new values were: {}.
 '''
 
+FAILURE_MESSAGE_NO_MUTATION_INDEX = '''
+The call {} should not modify its argument at index {}.
+The new value was: {}.
+'''
+
 FAILURE_MESSAGE_CONSTANTS = '''
 This set of tests checks whether you used the constants provided
 and did not hard-code their values. We changed the values of your

@@ -1,5 +1,4 @@
-"""Base class for testing the student test modules.
-"""
+"""Base class for testing the student test modules."""
 
 import importlib
 import sys
@@ -60,7 +59,7 @@ def auto_make_tests(testtester: unittest.TestCase, fname: str,
 
     i = start_count
     for (description, func) in bugs.items():
-        test_name = 'test_{}_{}'.format(i, func.__name__)
+        test_name = f'test_{i}_{func.__name__}'
 
         def new_test(self, func=func, description=description):
             checker = getattr(testtester, '_check')
