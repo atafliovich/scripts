@@ -3,9 +3,8 @@
 import os
 import sys
 
-FILENAME = 'bridge_functions.py'
-PYTA_LOCATION = '/home/anya/a08/assignments/a2/starter/pyta'
-PYTA_CONFIG_FILE = 'a2_pyta.txt'
+from config import FILENAME, PYTA_LOCATION, PYTA_CONFIG_FILE
+
 PYTA_OUT_FILENAME = 'errors.txt'
 
 FILEPATH = os.path.join(os.getcwd(), FILENAME)
@@ -21,5 +20,9 @@ reporter = python_ta.check_errors(
 
 for msg in reporter.messages[FILEPATH]:
     if msg.msg_id == 'E9999':
+        os.rename(FILEPATH,
+                  os.path.join(os.getcwd(), f'disallowed.{FILENAME}'))
         print("Disallowed imports. Refusing to run testers.")
         sys.exit(1)
+
+os.remove(PYTA_OUT_FILEPATH)
