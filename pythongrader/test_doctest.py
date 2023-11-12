@@ -7,7 +7,6 @@ import warnings
 import unittest
 import doctest
 import timeout_decorator
-from .config import TIMEOUT
 
 
 EXISTS_FAILURE_MESSAGE = '''
@@ -44,7 +43,6 @@ class TestDoctestBase(unittest.TestCase):
 
         return func, doc
 
-    @timeout_decorator.timeout(TIMEOUT)
     def doctests_pass(self, fname, module):
         """Check that all doctests in f pass."""
 
@@ -61,7 +59,8 @@ class TestDoctestBase(unittest.TestCase):
         self.assertFalse(failed, msg)  # no failed cases
 
 
-def auto_make_test_from_functions(unittest_object, function_names, module):
+def auto_make_test_from_functions(unittest_object, function_names, module,
+                                  timeout):
     """Generate unittest test methods: one per function in function_names
     per method of TestDoctestBase.
 
@@ -71,6 +70,8 @@ def auto_make_test_from_functions(unittest_object, function_names, module):
         test_name = f'test_doctests_pass_{fname}'
         test = TestDoctestBase.doctests_pass
 
+        @timeout_decorator.timeout(timeout, use_signals=False)
         def new_test(self, fname=fname, test=test, module=module):
             return test(self, fname, module)
+
         setattr(unittest_object, test_name, new_test)

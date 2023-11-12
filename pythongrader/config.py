@@ -1,6 +1,7 @@
 """Constants, etc. used by the grader."""
 
-TIMEOUT = 5
+# moved to param
+# TIMEOUT = 5
 
 # Is the use of third person command words allowed in docstrings?
 # E.g., "returns" instead of "return".

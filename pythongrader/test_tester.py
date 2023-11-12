@@ -6,7 +6,6 @@ from typing import Dict
 import unittest
 import timeout_decorator
 
-from .config import TIMEOUT
 from .messages import TEST_ERROR
 
 
@@ -33,7 +32,6 @@ class TestTesterBase(unittest.TestCase):
         self.reloadTesterModule()
         self._run_tester(description)
 
-    @timeout_decorator.timeout(TIMEOUT)
     def _run_tester(self, description: str):
         """Run the tester. If the result is successful, fail with
         description.
@@ -49,7 +47,7 @@ class TestTesterBase(unittest.TestCase):
 
 
 def auto_make_tests(testtester: unittest.TestCase, fname: str,
-                    bugs: Dict[str, callable], start_count=1):
+                    bugs: Dict[str, callable], timeout, start_count=1):
     """Create tests and add them to testtester. Each test runs _check() on
     one function from bugs.
 
@@ -61,9 +59,11 @@ def auto_make_tests(testtester: unittest.TestCase, fname: str,
     for (description, func) in bugs.items():
         test_name = f'test_{i}_{func.__name__}'
 
+        @timeout_decorator.timeout(timeout)
         def new_test(self, func=func, description=description):
             checker = getattr(testtester, '_check')
             checker(self, fname, func, description)
+
         setattr(testtester, test_name, new_test)
         i += 1
 
