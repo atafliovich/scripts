@@ -2,7 +2,6 @@
 
 import importlib
 import sys
-from typing import Dict
 import unittest
 import timeout_decorator
 
@@ -47,7 +46,7 @@ class TestTesterBase(unittest.TestCase):
 
 
 def auto_make_tests(testtester: unittest.TestCase, fname: str,
-                    bugs: Dict[str, callable], timeout, start_count=1):
+                    bugs: dict[str, callable], timeout, start_count=1):
     """Create tests and add them to testtester. Each test runs _check() on
     one function from bugs.
 
@@ -59,7 +58,7 @@ def auto_make_tests(testtester: unittest.TestCase, fname: str,
     for (description, func) in bugs.items():
         test_name = f'test_{i}_{func.__name__}'
 
-        @timeout_decorator.timeout(timeout)
+        @timeout_decorator.timeout(timeout, use_signals=False)
         def new_test(self, func=func, description=description):
             checker = getattr(testtester, '_check')
             checker(self, fname, func, description)

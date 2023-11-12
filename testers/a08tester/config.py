@@ -13,9 +13,10 @@ PYTA_LOCATION = '/home/anya/a08/assignments/a2/starter/pyta'
 PYTA_CONFIG_FILE = '/home/anya/a08/assignments/a2/starter/pyta/a2_pyta.txt'
 
 # Where to put the output of pyta.
-PYTA_OUT_FILENEAME = 'pyta_output.txt'
+PYTA_OUT_FILENAME = 'pyta_output.txt'
 
-TIMEOUT = 5
+# Timeout per test method
+TIMEOUT = 2
 
 # The functions that need to be tested. Used to generate a skeleton
 # unittest test suite.
