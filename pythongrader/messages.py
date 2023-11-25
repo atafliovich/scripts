@@ -103,8 +103,13 @@ but its annotation is actually:
 
 ### Student unittests Test Failure/Error Messages ###
 
-TEST_ERROR = '''
+TESTER_FAILURE_FALSE_NEGATIVE_MESSAGE = '''
 When we ran the tester file on the following implementation,
 it did not detect the bug(s):
 {}
+'''
+
+TESTER_FAILURE_FALSE_POSITIVE_MESSAGE = '''
+When we ran the tester file on the correct implementation,
+it failed.
 '''
